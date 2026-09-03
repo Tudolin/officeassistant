@@ -4,6 +4,27 @@ Assistente de reunião desktop (Windows) que fica visível apenas para você —
 mesmo compartilhando a tela inteira no Teams, Google Meet ou Zoom — com
 ajuda do Claude, transcrição/tradução ao vivo (PT/EN) e modo roteiro.
 
+## ⬇️ Baixar o instalador (.exe)
+
+O instalador Windows é gerado automaticamente pelo GitHub Actions (numa
+máquina Windows real) a cada push nesta branch, e publicado na aba
+**[Releases](../../releases/tag/latest-build)** deste repositório, sob a
+tag `latest-build`:
+
+**→ [github.com/Tudolin/officeassistant/releases/tag/latest-build](https://github.com/Tudolin/officeassistant/releases/tag/latest-build)**
+
+Baixe o arquivo `Meeting Copilot Setup <versão>.exe` na seção "Assets" e
+rode no Windows. Ele não é assinado digitalmente, então o **SmartScreen do
+Windows** vai avisar "O Windows protegeu o computador" — clique em **Mais
+informações > Executar assim mesmo**.
+
+Se ainda não houver nenhum build lá (primeira vez), veja o progresso na aba
+**[Actions](../../actions/workflows/build-windows.yml)** do repositório —
+o build leva alguns minutos. Depois de instalado, siga o
+[docs/SETUP.md](docs/SETUP.md) para configurar o Claude Code CLI e o
+whisper.cpp (ou deixe o assistente de configuração do próprio app cuidar
+disso no primeiro uso).
+
 ## Recursos
 
 - **Overlay invisível ao compartilhar tela**: usa `setContentProtection`

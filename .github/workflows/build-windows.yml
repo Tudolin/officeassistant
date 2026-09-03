@@ -1,0 +1,60 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches:
+      - claude/meeting-assistant-desktop-ye6066
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build app bundle
+        run: npm run build
+
+      - name: Build Windows installer (NSIS)
+        run: npm run dist
+
+      - name: Upload installer as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: meeting-copilot-installer
+          path: release/*.exe
+          if-no-files-found: error
+
+      - name: Publish/update "latest-build" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Meeting Copilot - build automático
+          prerelease: true
+          body: |
+            Build automático gerado pelo GitHub Actions a partir do commit
+            ${{ github.sha }} (branch `${{ github.ref_name }}`).
+
+            Baixe o `.exe` abaixo e rode no Windows. Veja `docs/SETUP.md`
+            para configurar o Claude Code CLI e o whisper.cpp.
+
+            O instalador não é assinado digitalmente, então o Windows
+            SmartScreen pode avisar "O Windows protegeu o computador" -
+            clique em **Mais informações > Executar assim mesmo**.
+          files: release/*.exe
