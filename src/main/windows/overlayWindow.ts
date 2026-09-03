@@ -4,7 +4,7 @@ import path from 'path';
 let overlayWindow: BrowserWindow | null = null;
 let clickThrough = false;
 
-export function createOverlayWindow(): BrowserWindow {
+export function createOverlayWindow(options: { startVisible: boolean } = { startVisible: true }): BrowserWindow {
   const display = screen.getPrimaryDisplay();
   const width = 420;
   const height = 560;
@@ -40,7 +40,7 @@ export function createOverlayWindow(): BrowserWindow {
   overlayWindow.loadFile(path.join(__dirname, '..', 'renderer', 'overlay', 'index.html'));
 
   overlayWindow.once('ready-to-show', () => {
-    overlayWindow?.show();
+    if (options.startVisible) overlayWindow?.show();
   });
 
   overlayWindow.on('closed', () => {

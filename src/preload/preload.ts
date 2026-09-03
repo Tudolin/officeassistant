@@ -48,6 +48,7 @@ const api = {
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet) as Promise<AppSettings>,
     set: (partial: Partial<AppSettings>) => ipcRenderer.invoke(IPC.settingsSet, partial) as Promise<AppSettings>,
+    openSetupWizard: () => ipcRenderer.send(IPC.setupOpenWindow),
   },
 };
 

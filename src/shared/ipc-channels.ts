@@ -42,4 +42,15 @@ export const IPC = {
   // Settings
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
+
+  // Setup wizard
+  setupOpenWindow: 'setup:open-window',
+  setupCheckAll: 'setup:check-all',
+  setupInstallClaudeCli: 'setup:install-claude-cli',
+  setupOpenClaudeLogin: 'setup:open-claude-login',
+  setupDownloadWhisperBinary: 'setup:download-whisper-binary',
+  setupDownloadWhisperModel: 'setup:download-whisper-model',
+  setupFinish: 'setup:finish',
+  setupProgress: 'setup:progress', // main -> renderer
+  setupLog: 'setup:log', // main -> renderer
 } as const;

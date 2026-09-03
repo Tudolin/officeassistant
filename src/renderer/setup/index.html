@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Meeting Copilot - Configuração inicial</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <h1>Configuração inicial</h1>
+      <p class="subtitle">
+        Vamos checar o que o Meeting Copilot precisa para funcionar. Itens de Claude são
+        obrigatórios; os de whisper.cpp são recomendados (necessários só para transcrição/tradução).
+      </p>
+
+      <div id="reqList" class="req-list"></div>
+
+      <div class="progress-block" id="progressBlock" hidden>
+        <div class="progress-label" id="progressLabel">Baixando...</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+
+      <pre id="logBox" class="log-box" hidden></pre>
+
+      <div class="footer">
+        <button id="btnRecheck" class="secondary-btn">Verificar novamente</button>
+        <div class="spacer"></div>
+        <button id="btnSkip" class="secondary-btn">Pular por agora</button>
+        <button id="btnFinish" class="primary-btn">Concluir</button>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

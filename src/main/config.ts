@@ -13,6 +13,7 @@ const defaults: AppSettings = {
   translationTargetPair: 'pt-en',
   keepAudioChunks: false,
   dataDir: '',
+  setupCompleted: false,
   hotkeys: {
     toggleOverlay: 'Control+Shift+H',
     toggleClickThrough: 'Control+Shift+G',

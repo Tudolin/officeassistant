@@ -10,6 +10,7 @@ export interface AppSettings {
   translationTargetPair: 'pt-en';
   keepAudioChunks: boolean;
   dataDir: string;
+  setupCompleted: boolean;
   hotkeys: {
     toggleOverlay: string;
     toggleClickThrough: string;

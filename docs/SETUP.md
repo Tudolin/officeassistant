@@ -11,7 +11,25 @@ usa: o Claude Code CLI (para o assistente e a tradução) e o whisper.cpp
 - Node.js 20+ instalado.
 - Uma assinatura Claude com acesso ao Claude Code CLI (não usamos API key).
 
-## 2. Instalar e logar no Claude Code CLI
+## 2. (Recomendado) Deixe o assistente de configuração cuidar disso
+
+Na primeira execução, o app abre uma tela de **Configuração inicial** que
+checa automaticamente Claude CLI, login e whisper.cpp, com botões para:
+
+- Instalar o Claude Code CLI via `npm install -g` (se você já tiver Node/npm).
+- Abrir um terminal para você fazer `claude /login` (o fluxo OAuth abre no
+  navegador; o app não pode automatizar isso por você).
+- Baixar automaticamente um binário whisper.cpp (Windows x64, CPU) da última
+  release no GitHub e um modelo `ggml-small.bin` do Hugging Face, já
+  configurando os caminhos nas Configurações.
+
+Você pode reabrir essa tela a qualquer momento em **Configurações
+(⚙) > Verificar requisitos...**, ou pelo menu da bandeja do sistema. As
+seções abaixo explicam o que fazer manualmente caso prefira, ou caso o
+download automático do whisper.cpp falhe (a release mudou de nome, sem
+internet, etc.).
+
+## 3. Instalar e logar no Claude Code CLI (manual)
 
 ```powershell
 npm install -g @anthropic-ai/claude-code
@@ -28,7 +46,7 @@ Se isso imprimir `ok`, o app conseguirá chamar o Claude durante a reunião.
 Nas Configurações do app, "Caminho do Claude CLI" pode ficar como `claude`
 se o comando já estiver no PATH, ou o caminho completo do `.cmd`/`.exe`.
 
-## 3. Instalar o whisper.cpp (transcrição local)
+## 4. Instalar o whisper.cpp (transcrição local, manual)
 
 1. Baixe um build pré-compilado para Windows (x64, CPU) das releases do
    projeto `ggml-org/whisper.cpp` no GitHub, ou compile localmente. Você quer
@@ -44,7 +62,7 @@ se o comando já estiver no PATH, ou o caminho completo do `.cmd`/`.exe`.
 
 Tudo roda localmente — nenhum áudio da reunião sai da sua máquina.
 
-## 4. Rodar em desenvolvimento
+## 5. Rodar em desenvolvimento
 
 ```powershell
 npm install
@@ -56,7 +74,7 @@ permissão de **microfone** (para captar sua voz) — aceite. A captação do
 áudio do sistema (o que os outros falam) usa loopback via
 `desktopCapturer`, sem precisar de driver extra.
 
-## 5. Gerar o instalador (.exe)
+## 6. Gerar o instalador (.exe)
 
 ```powershell
 npm run dist
@@ -76,6 +94,14 @@ Gera o instalador NSIS em `release/`.
 | `Ctrl+Shift+R` | Abrir o modo roteiro (teleprompter) |
 | `Ctrl+Shift+L` | Ligar/desligar tradução automática |
 
+## Bandeja do sistema
+
+O app não aparece na barra de tarefas — todas as janelas usam `skipTaskbar`.
+Ele fica acessível pelo ícone na bandeja (perto do relógio); o Windows pode
+escondê-lo inicialmente no menu "mostrar ícones ocultos" (o `^`), o que é
+esperado. Pelo menu do ícone dá pra mostrar/ocultar o overlay, disparar as
+mesmas ações dos atalhos, reabrir a Configuração inicial, e sair do app.
+
 ## Por que fica invisível na tela compartilhada?
 
 O overlay usa `BrowserWindow.setContentProtection(true)` do Electron, que no
@@ -94,3 +120,6 @@ compartilhamento (Teams, Meet, Zoom, gravação de tela, etc.) — ela continua
   áudio do sistema são comportamentos específicos do Windows.
 - Detecção de idioma da fala usa `-l auto` do whisper.cpp por chunk; frases
   muito curtas podem ser mal classificadas.
+- O download automático do whisper.cpp depende do formato dos assets da
+  última release no GitHub e da URL de modelos do Hugging Face continuarem
+  no mesmo padrão; se falhar, use a instalação manual (seção 4).

@@ -266,6 +266,8 @@ function initSettings(): void {
     });
     alert('Configurações salvas.');
   });
+
+  $('btnOpenSetupWizard').addEventListener('click', () => api.settings.openSetupWizard());
 }
 
 initTabs();

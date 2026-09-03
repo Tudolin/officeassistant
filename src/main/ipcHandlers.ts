@@ -17,10 +17,17 @@ import { ingestPcmChunk, isTranscriptionEnabled, onTranscriptLine, setTranscript
 import { onTranslation, queueTranslation } from './services/translation';
 import { getOverlayWindow, toggleClickThrough, toggleOverlayVisibility } from './windows/overlayWindow';
 import { getAudioCaptureWindow } from './windows/audioCaptureWindow';
+import { createOrShowSetupWindow, getSetupWindow } from './windows/setupWindow';
+import { checkAllRequirements } from './services/requirements';
+import { downloadWhisperBinary, downloadWhisperModel, installClaudeCliViaNpm, openClaudeLoginTerminal } from './services/setupActions';
 import type { AssistantMessage, TranscriptLine } from '../shared/types';
 
 function sendToOverlay(channel: string, payload: unknown): void {
   getOverlayWindow()?.webContents.send(channel, payload);
+}
+
+function sendToSetup(channel: string, payload: unknown): void {
+  getSetupWindow()?.webContents.send(channel, payload);
 }
 
 export function registerIpcHandlers(): void {
@@ -129,4 +136,48 @@ export function registerIpcHandlers(): void {
   // --- Settings ---
   ipcMain.handle(IPC.settingsGet, () => getSettings());
   ipcMain.handle(IPC.settingsSet, (_e, partial) => setSettings(partial));
+
+  // --- Setup wizard ---
+  ipcMain.on(IPC.setupOpenWindow, () => createOrShowSetupWindow());
+
+  ipcMain.handle(IPC.setupCheckAll, () => checkAllRequirements());
+
+  ipcMain.handle(IPC.setupInstallClaudeCli, async () => {
+    try {
+      await installClaudeCliViaNpm((line) => sendToSetup(IPC.setupLog, line));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle(IPC.setupOpenClaudeLogin, () => {
+    openClaudeLoginTerminal();
+  });
+
+  ipcMain.handle(IPC.setupDownloadWhisperBinary, async () => {
+    try {
+      const path = await downloadWhisperBinary((item, received, total) => sendToSetup(IPC.setupProgress, { item, received, total }));
+      return { ok: true, path };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle(IPC.setupDownloadWhisperModel, async (_e, modelName: 'tiny' | 'base' | 'small' | 'medium') => {
+    try {
+      const path = await downloadWhisperModel(modelName, (item, received, total) =>
+        sendToSetup(IPC.setupProgress, { item, received, total })
+      );
+      return { ok: true, path };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle(IPC.setupFinish, () => {
+    setSettings({ setupCompleted: true });
+    getSetupWindow()?.close();
+    getOverlayWindow()?.show();
+  });
 }

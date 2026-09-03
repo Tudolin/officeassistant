@@ -10,6 +10,13 @@ ajuda do Claude, transcrição/tradução ao vivo (PT/EN) e modo roteiro.
   (Electron) para ficar oculto de qualquer gravação/compartilhamento de
   tela no Windows, mas 100% visível para você. Visual translúcido tipo
   "vidro fosco" (aero glass), para não tampar o que está atrás.
+- **Roda só na bandeja do sistema**: nenhuma janela aparece na barra de
+  tarefas (`skipTaskbar` em todas elas); o app fica acessível pelo ícone na
+  bandeja (inclusive dentro do menu "mostrar ícones ocultos" do Windows).
+- **Assistente de configuração inicial**: ao abrir pela primeira vez (ou a
+  qualquer momento em Configurações > "Verificar requisitos..."), o app
+  checa se o Claude CLI está instalado/logado e se o whisper.cpp está
+  configurado, com botões para instalar/baixar automaticamente o que faltar.
 - **Assistente com Claude Code**: pergunte algo e receba a resposta no
   popup, sem sair da chamada.
 - **Print + pergunta (`Ctrl+Shift+A`)**: tira um print da tela, manda pro

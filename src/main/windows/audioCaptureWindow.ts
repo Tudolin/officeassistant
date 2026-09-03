@@ -6,6 +6,7 @@ let audioWindow: BrowserWindow | null = null;
 export function createAudioCaptureWindow(): BrowserWindow {
   audioWindow = new BrowserWindow({
     show: false,
+    skipTaskbar: true,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'audioCapturePreload.js'),
       contextIsolation: true,
