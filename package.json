@@ -12,7 +12,7 @@
     "watch": "npm run build -- --watch",
     "start": "npm run build && electron .",
     "dev": "npm run build && electron . --dev",
-    "dist": "npm run build && electron-builder --win",
+    "dist": "npm run build && electron-builder --win --publish never",
     "typecheck": "tsc --noEmit",
     "generate:icon": "node scripts/generate-icon.js"
   },
