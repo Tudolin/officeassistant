@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:; script-src 'self'" />
+    <title>Meeting Copilot</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app" class="glass-shell">
+      <header id="titlebar" class="titlebar">
+        <div class="titlebar-drag">
+          <span class="dot" id="statusDot" title="Status"></span>
+          <span class="app-name">Meeting Copilot</span>
+        </div>
+        <div class="titlebar-actions">
+          <button id="btnClickThrough" class="icon-btn" title="Alternar clique-atravessar (Ctrl+Shift+G)">⧉</button>
+          <button id="btnHide" class="icon-btn" title="Ocultar overlay (Ctrl+Shift+H)">—</button>
+        </div>
+      </header>
+
+      <nav id="tabs" class="tabs">
+        <button class="tab active" data-panel="assistant">Assistente</button>
+        <button class="tab" data-panel="transcript">Transcrição</button>
+        <button class="tab" data-panel="translation">Tradução</button>
+        <button class="tab" data-panel="teleprompter">Roteiro</button>
+        <button class="tab" data-panel="notes">Notas</button>
+        <button class="tab" data-panel="settings">⚙</button>
+      </nav>
+
+      <main id="panels" class="panels">
+        <section class="panel active" data-panel="assistant">
+          <div id="assistantLog" class="scroll-log"></div>
+          <div class="input-row">
+            <input id="assistantInput" type="text" placeholder="Pergunte algo ao Claude..." />
+            <button id="btnAsk" class="primary-btn">Perguntar</button>
+            <button id="btnScreenshot" class="secondary-btn" title="Print + perguntar ao Claude (Ctrl+Shift+A)">📷</button>
+          </div>
+        </section>
+
+        <section class="panel" data-panel="transcript">
+          <div class="toolbar">
+            <label class="switch">
+              <input type="checkbox" id="toggleTranscription" />
+              <span>Gravar/transcrever (Ctrl+Shift+T)</span>
+            </label>
+          </div>
+          <div id="transcriptLog" class="scroll-log"></div>
+        </section>
+
+        <section class="panel" data-panel="translation">
+          <div class="toolbar">
+            <label class="switch">
+              <input type="checkbox" id="toggleTranslation" checked />
+              <span>Tradução automática (Ctrl+Shift+L)</span>
+            </label>
+          </div>
+          <div id="translationLog" class="scroll-log"></div>
+        </section>
+
+        <section class="panel" data-panel="teleprompter">
+          <div class="toolbar">
+            <input id="teleprompterTitle" type="text" placeholder="Título do roteiro" />
+            <button id="btnTeleprompterPlay" class="secondary-btn">▶ Rolar</button>
+            <input id="teleprompterSpeed" type="range" min="5" max="80" value="20" title="Velocidade" />
+          </div>
+          <textarea id="teleprompterEdit" class="script-edit" placeholder="Escreva aqui os tópicos/roteiro da apresentação..."></textarea>
+          <div id="teleprompterView" class="script-view" hidden></div>
+        </section>
+
+        <section class="panel" data-panel="notes">
+          <div class="toolbar">
+            <button id="btnNewMeeting" class="secondary-btn">Nova reunião</button>
+            <button id="btnExport" class="secondary-btn">Exportar .md</button>
+          </div>
+          <textarea id="notesEdit" class="script-edit" placeholder="Anotações da reunião..."></textarea>
+        </section>
+
+        <section class="panel" data-panel="settings">
+          <div class="settings-form" id="settingsForm">
+            <label>Caminho do Claude CLI<input id="cfgClaudeCli" type="text" placeholder="claude" /></label>
+            <label>Modelo Claude (opcional)<input id="cfgClaudeModel" type="text" placeholder="ex: claude-sonnet-5" /></label>
+            <label>Binário whisper.cpp<input id="cfgWhisperBin" type="text" placeholder="C:\\whisper\\whisper-cli.exe" /></label>
+            <label>Modelo whisper (.bin)<input id="cfgWhisperModel" type="text" placeholder="C:\\whisper\\models\\ggml-small.bin" /></label>
+            <label>Idioma da transcrição
+              <select id="cfgWhisperLang">
+                <option value="auto">Automático (PT/EN)</option>
+                <option value="pt">Português</option>
+                <option value="en">Inglês</option>
+              </select>
+            </label>
+            <label>Pasta de dados (transcrições/notas)<input id="cfgDataDir" type="text" /></label>
+            <label class="switch"><input type="checkbox" id="cfgKeepAudio" /><span>Manter arquivos de áudio (debug)</span></label>
+            <button id="btnSaveSettings" class="primary-btn">Salvar</button>
+            <p class="hint">Atalhos globais são carregados na inicialização — reinicie o app após mudar de máquina/config de teclado.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

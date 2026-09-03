@@ -1,0 +1,132 @@
+import { desktopCapturer, ipcMain, IpcMainInvokeEvent, screen } from 'electron';
+import { IPC } from '../shared/ipc-channels';
+import { getSettings, setSettings } from './config';
+import { askClaude, askClaudeAboutImage } from './services/claudeCli';
+import { captureScreenToFile } from './services/screenshot';
+import { getScript, saveScript } from './services/teleprompter';
+import {
+  addAssistantMessage,
+  addTranscriptLine,
+  exportSessionMarkdown,
+  getActiveSession,
+  startNewMeeting,
+  updateNotes,
+  updateTranscriptLine,
+} from './services/sessionStore';
+import { ingestPcmChunk, isTranscriptionEnabled, onTranscriptLine, setTranscriptionEnabled } from './services/audioPipeline';
+import { onTranslation, queueTranslation } from './services/translation';
+import { getOverlayWindow, toggleClickThrough, toggleOverlayVisibility } from './windows/overlayWindow';
+import { getAudioCaptureWindow } from './windows/audioCaptureWindow';
+import type { AssistantMessage, TranscriptLine } from '../shared/types';
+
+function sendToOverlay(channel: string, payload: unknown): void {
+  getOverlayWindow()?.webContents.send(channel, payload);
+}
+
+export function registerIpcHandlers(): void {
+  ipcMain.on(IPC.overlayToggle, () => toggleOverlayVisibility());
+  ipcMain.handle(IPC.clickThroughToggle, () => toggleClickThrough());
+  ipcMain.on(IPC.panelShow, (_e, panelId: string) => sendToOverlay(IPC.panelShow, panelId));
+
+  ipcMain.handle(IPC.askClaude, async (_e: IpcMainInvokeEvent, question: string) => {
+    const pending: AssistantMessage = {
+      id: `${Date.now()}`,
+      timestamp: Date.now(),
+      kind: 'question',
+      text: question,
+    };
+    addAssistantMessage(pending);
+
+    try {
+      const answer = await askClaude(question);
+      const msg: AssistantMessage = { id: `${Date.now()}-a`, timestamp: Date.now(), kind: 'answer', text: answer };
+      addAssistantMessage(msg);
+      return msg;
+    } catch (err) {
+      const msg: AssistantMessage = {
+        id: `${Date.now()}-e`,
+        timestamp: Date.now(),
+        kind: 'error',
+        text: (err as Error).message,
+      };
+      addAssistantMessage(msg);
+      return msg;
+    }
+  });
+
+  ipcMain.handle(IPC.screenshotAsk, async (_e: IpcMainInvokeEvent, question: string) => {
+    try {
+      const imagePath = await captureScreenToFile();
+      addAssistantMessage({
+        id: `${Date.now()}-shot`,
+        timestamp: Date.now(),
+        kind: 'screenshot',
+        text: question,
+        imagePath,
+      });
+      const answer = await askClaudeAboutImage(imagePath, question);
+      const msg: AssistantMessage = { id: `${Date.now()}-a`, timestamp: Date.now(), kind: 'answer', text: answer };
+      addAssistantMessage(msg);
+      return msg;
+    } catch (err) {
+      const msg: AssistantMessage = {
+        id: `${Date.now()}-e`,
+        timestamp: Date.now(),
+        kind: 'error',
+        text: (err as Error).message,
+      };
+      addAssistantMessage(msg);
+      return msg;
+    }
+  });
+
+  // --- Transcription / audio ---
+  ipcMain.handle(IPC.transcriptionEnable, (_e, enabled: boolean) => {
+    setTranscriptionEnabled(enabled);
+    getAudioCaptureWindow()?.webContents.send(enabled ? IPC.audioCaptureStart : IPC.audioCaptureStop);
+    return enabled;
+  });
+  ipcMain.handle(IPC.transcriptionGetState, () => isTranscriptionEnabled());
+
+  ipcMain.handle(IPC.audioGetDesktopSourceId, async () => {
+    const display = screen.getPrimaryDisplay();
+    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    const primary = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
+    if (!primary) throw new Error('No screen source available for audio loopback capture.');
+    return primary.id;
+  });
+
+  ipcMain.on(IPC.audioChunk, (_e, payload: { speaker: 'you' | 'others'; pcm: ArrayBufferLike }) => {
+    ingestPcmChunk(payload.speaker, Buffer.from(payload.pcm));
+  });
+
+  onTranscriptLine((line: TranscriptLine) => {
+    addTranscriptLine(line);
+    sendToOverlay(IPC.transcriptEvent, line);
+    queueTranslation(line);
+  });
+
+  onTranslation((line: TranscriptLine) => {
+    updateTranscriptLine(line.id, { translation: line.translation });
+    sendToOverlay(IPC.translationEvent, line);
+  });
+
+  ipcMain.handle(IPC.translationEnable, (_e, enabled: boolean) => {
+    setSettings({ translationEnabled: enabled });
+    return enabled;
+  });
+
+  // --- Teleprompter ---
+  ipcMain.handle(IPC.teleprompterGet, () => getScript());
+  ipcMain.handle(IPC.teleprompterSet, (_e, script) => saveScript(script));
+
+  // --- Session / notes ---
+  ipcMain.handle(IPC.sessionGetActive, () => getActiveSession());
+  ipcMain.handle(IPC.sessionUpdateNotes, (_e, notes: string) => updateNotes(notes));
+  ipcMain.handle(IPC.sessionNewMeeting, () => startNewMeeting());
+  ipcMain.handle(IPC.sessionExport, () => exportSessionMarkdown(getActiveSession()));
+
+  // --- Settings ---
+  ipcMain.handle(IPC.settingsGet, () => getSettings());
+  ipcMain.handle(IPC.settingsSet, (_e, partial) => setSettings(partial));
+}

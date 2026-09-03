@@ -1,0 +1,45 @@
+// Central registry of IPC channel names shared between main, preload and renderer.
+export const IPC = {
+  // Overlay <-> main
+  overlayToggle: 'overlay:toggle',
+  clickThroughToggle: 'overlay:click-through-toggle',
+  panelShow: 'overlay:panel-show',
+
+  // Global-hotkey-triggered actions, forwarded from main to the overlay renderer
+  shortcutAskClaude: 'shortcut:ask-claude',
+  shortcutScreenshotAsk: 'shortcut:screenshot-ask',
+  shortcutToggleTranscription: 'shortcut:toggle-transcription',
+  shortcutToggleTranslation: 'shortcut:toggle-translation',
+
+  // Assistant (Claude Code CLI)
+  askClaude: 'assistant:ask',
+  screenshotAsk: 'assistant:screenshot-ask',
+  assistantEvent: 'assistant:event', // main -> renderer stream of AssistantMessage
+
+  // Audio capture window <-> main
+  audioGetDesktopSourceId: 'audio:get-desktop-source-id',
+  audioChunk: 'audio:chunk', // renderer(hidden) -> main raw PCM chunk
+  audioCaptureStart: 'audio:capture-start', // main -> hidden renderer
+  audioCaptureStop: 'audio:capture-stop', // main -> hidden renderer
+  transcriptionEnable: 'audio:transcription-enable',
+  transcriptionGetState: 'audio:transcription-get-state',
+  transcriptEvent: 'audio:transcript-event', // main -> renderer
+
+  // Translation
+  translationEnable: 'translation:enable',
+  translationEvent: 'translation:event',
+
+  // Teleprompter
+  teleprompterGet: 'teleprompter:get',
+  teleprompterSet: 'teleprompter:set',
+
+  // Notes / session
+  sessionGetActive: 'session:get-active',
+  sessionUpdateNotes: 'session:update-notes',
+  sessionNewMeeting: 'session:new-meeting',
+  sessionExport: 'session:export',
+
+  // Settings
+  settingsGet: 'settings:get',
+  settingsSet: 'settings:set',
+} as const;

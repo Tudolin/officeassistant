@@ -1,0 +1,30 @@
+{
+  "name": "meeting-copilot",
+  "version": "0.1.0",
+  "description": "Assistente de reuniao desktop invisivel em compartilhamento de tela (Windows) com Claude Code, transcricao e traducao ao vivo, e modo roteiro.",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "npm run build:main && npm run build:preload && npm run build:renderer",
+    "build:main": "esbuild src/main/index.ts --bundle --platform=node --target=node22 --external:electron --outfile=dist/main/index.js",
+    "build:preload": "esbuild src/preload/preload.ts --bundle --platform=node --target=node22 --external:electron --outfile=dist/preload/preload.js && esbuild src/preload/audioCapturePreload.ts --bundle --platform=node --target=node22 --external:electron --outfile=dist/preload/audioCapturePreload.js",
+    "build:renderer": "esbuild src/renderer/overlay/app.ts --bundle --platform=browser --outfile=dist/renderer/overlay/app.js && esbuild src/renderer/audio/audio-capture.ts --bundle --platform=browser --outfile=dist/renderer/audio/audio-capture.js && node scripts/copy-static.js",
+    "watch": "npm run build -- --watch",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron . --dev",
+    "dist": "npm run build && electron-builder --win",
+    "typecheck": "tsc --noEmit"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  }
+}
