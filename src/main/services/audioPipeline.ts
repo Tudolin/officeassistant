@@ -3,6 +3,7 @@ import os from 'os';
 import fs from 'fs';
 import { pcm16ToWav } from './wav';
 import { transcribeWavFile } from './whisper';
+import { getSettings } from '../config';
 import type { SpeakerTag, TranscriptLine } from '../../shared/types';
 
 const SAMPLE_RATE = 16_000;
@@ -44,7 +45,9 @@ export function ingestPcmChunk(speaker: SpeakerTag, pcmBuffer: Buffer): void {
     fs.writeFileSync(wavPath, wav);
 
     try {
-      const { text } = await transcribeWavFile(wavPath);
+      const settings = getSettings();
+      const language = speaker === 'you' ? settings.whisperLanguageYou : settings.whisperLanguageOthers;
+      const { text } = await transcribeWavFile(wavPath, language);
       const cleaned = cleanTranscript(text);
       if (!cleaned) return;
 
@@ -52,7 +55,7 @@ export function ingestPcmChunk(speaker: SpeakerTag, pcmBuffer: Buffer): void {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         timestamp: Date.now(),
         speaker,
-        language: 'unknown',
+        language: language === 'auto' ? 'unknown' : language,
         text: cleaned,
       };
       listener?.(line);

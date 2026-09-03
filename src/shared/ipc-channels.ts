@@ -4,6 +4,7 @@ export const IPC = {
   overlayToggle: 'overlay:toggle',
   clickThroughToggle: 'overlay:click-through-toggle',
   panelShow: 'overlay:panel-show',
+  overlaySetPositionPreset: 'overlay:set-position-preset',
 
   // Global-hotkey-triggered actions, forwarded from main to the overlay renderer
   shortcutAskClaude: 'shortcut:ask-claude',

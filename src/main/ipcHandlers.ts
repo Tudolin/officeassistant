@@ -15,7 +15,7 @@ import {
 } from './services/sessionStore';
 import { ingestPcmChunk, isTranscriptionEnabled, onTranscriptLine, setTranscriptionEnabled } from './services/audioPipeline';
 import { onTranslation, queueTranslation } from './services/translation';
-import { getOverlayWindow, toggleClickThrough, toggleOverlayVisibility } from './windows/overlayWindow';
+import { getOverlayWindow, setOverlayPositionPreset, toggleClickThrough, toggleOverlayVisibility } from './windows/overlayWindow';
 import { getAudioCaptureWindow } from './windows/audioCaptureWindow';
 import { createOrShowSetupWindow, getSetupWindow } from './windows/setupWindow';
 import { checkAllRequirements } from './services/requirements';
@@ -34,6 +34,7 @@ export function registerIpcHandlers(): void {
   ipcMain.on(IPC.overlayToggle, () => toggleOverlayVisibility());
   ipcMain.handle(IPC.clickThroughToggle, () => toggleClickThrough());
   ipcMain.on(IPC.panelShow, (_e, panelId: string) => sendToOverlay(IPC.panelShow, panelId));
+  ipcMain.on(IPC.overlaySetPositionPreset, (_e, preset) => setOverlayPositionPreset(preset));
 
   ipcMain.handle(IPC.askClaude, async (_e: IpcMainInvokeEvent, question: string) => {
     const pending: AssistantMessage = {

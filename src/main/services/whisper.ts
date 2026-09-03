@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { getSettings } from '../config';
+import type { WhisperLang } from '../../shared/types';
 
 export interface WhisperResult {
   text: string;
@@ -11,9 +12,11 @@ export interface WhisperResult {
 /**
  * Runs a local whisper.cpp binary (whisper-cli.exe / main.exe) against one WAV
  * chunk and returns the transcribed text. Fully local/offline - no audio ever
- * leaves the machine.
+ * leaves the machine. `language` is picked per audio source (mic vs system)
+ * so a meeting can e.g. transcribe your own voice as English-only while
+ * auto-detecting the other participants, or vice-versa.
  */
-export function transcribeWavFile(wavPath: string): Promise<WhisperResult> {
+export function transcribeWavFile(wavPath: string, language: WhisperLang): Promise<WhisperResult> {
   const settings = getSettings();
   if (!settings.whisperBinaryPath || !settings.whisperModelPath) {
     return Promise.reject(
@@ -26,7 +29,7 @@ export function transcribeWavFile(wavPath: string): Promise<WhisperResult> {
   const args = [
     '-m', settings.whisperModelPath,
     '-f', wavPath,
-    '-l', settings.whisperLanguage,
+    '-l', language,
     '-nt', // no timestamps in output text
     '-otxt',
     '-of', outBase,

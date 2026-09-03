@@ -1,6 +1,13 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import { IPC } from '../shared/ipc-channels';
-import type { AppSettings, AssistantMessage, MeetingSession, TeleprompterScript, TranscriptLine } from '../shared/types';
+import type {
+  AppSettings,
+  AssistantMessage,
+  MeetingSession,
+  OverlayPositionPreset,
+  TeleprompterScript,
+  TranscriptLine,
+} from '../shared/types';
 
 function on<T>(channel: string, cb: (payload: T) => void): () => void {
   const handler = (_event: IpcRendererEvent, payload: T) => cb(payload);
@@ -19,6 +26,7 @@ const api = {
     onShortcutScreenshotAsk: (cb: () => void) => on<void>(IPC.shortcutScreenshotAsk, cb),
     onShortcutToggleTranscription: (cb: () => void) => on<void>(IPC.shortcutToggleTranscription, cb),
     onShortcutToggleTranslation: (cb: () => void) => on<void>(IPC.shortcutToggleTranslation, cb),
+    setPositionPreset: (preset: OverlayPositionPreset) => ipcRenderer.send(IPC.overlaySetPositionPreset, preset),
   },
   assistant: {
     ask: (question: string) => ipcRenderer.invoke(IPC.askClaude, question) as Promise<AssistantMessage>,

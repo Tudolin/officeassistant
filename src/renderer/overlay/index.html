@@ -78,19 +78,54 @@
 
         <section class="panel" data-panel="settings">
           <div class="settings-form" id="settingsForm">
+            <h3>Claude</h3>
             <label>Caminho do Claude CLI<input id="cfgClaudeCli" type="text" placeholder="claude" /></label>
             <label>Modelo Claude (opcional)<input id="cfgClaudeModel" type="text" placeholder="ex: claude-sonnet-5" /></label>
+
+            <h3>Transcrição (whisper.cpp)</h3>
             <label>Binário whisper.cpp<input id="cfgWhisperBin" type="text" placeholder="C:\\whisper\\whisper-cli.exe" /></label>
             <label>Modelo whisper (.bin)<input id="cfgWhisperModel" type="text" placeholder="C:\\whisper\\models\\ggml-small.bin" /></label>
-            <label>Idioma da transcrição
-              <select id="cfgWhisperLang">
+            <label>Idioma - Você (microfone)
+              <select id="cfgWhisperLangYou">
                 <option value="auto">Automático (PT/EN)</option>
                 <option value="pt">Português</option>
                 <option value="en">Inglês</option>
               </select>
             </label>
-            <label>Pasta de dados (transcrições/notas)<input id="cfgDataDir" type="text" /></label>
+            <label>Idioma - Outros (áudio do sistema)
+              <select id="cfgWhisperLangOthers">
+                <option value="auto">Automático (PT/EN)</option>
+                <option value="pt">Português</option>
+                <option value="en">Inglês</option>
+              </select>
+            </label>
             <label class="switch"><input type="checkbox" id="cfgKeepAudio" /><span>Manter arquivos de áudio (debug)</span></label>
+            <label>Pasta de dados (transcrições/notas)<input id="cfgDataDir" type="text" /></label>
+
+            <h3>Layout do overlay</h3>
+            <label>Posição
+              <select id="cfgOverlayPosition">
+                <option value="top-right">Superior direito</option>
+                <option value="top-left">Superior esquerdo</option>
+                <option value="bottom-right">Inferior direito</option>
+                <option value="bottom-left">Inferior esquerdo</option>
+                <option value="custom">Personalizada (arrastar)</option>
+              </select>
+            </label>
+            <p class="hint">Ou arraste a janela pelo título — a posição e o tamanho ficam salvos automaticamente.</p>
+            <label>Transparência do vidro
+              <input id="cfgGlassOpacity" type="range" min="15" max="85" value="42" />
+            </label>
+
+            <h3>Painéis visíveis</h3>
+            <div class="panel-toggles" id="panelToggles">
+              <label class="switch"><input type="checkbox" id="cfgPanelAssistant" /><span>Assistente</span></label>
+              <label class="switch"><input type="checkbox" id="cfgPanelTranscript" /><span>Transcrição</span></label>
+              <label class="switch"><input type="checkbox" id="cfgPanelTranslation" /><span>Tradução</span></label>
+              <label class="switch"><input type="checkbox" id="cfgPanelTeleprompter" /><span>Roteiro</span></label>
+              <label class="switch"><input type="checkbox" id="cfgPanelNotes" /><span>Notas</span></label>
+            </div>
+
             <button id="btnSaveSettings" class="primary-btn">Salvar</button>
             <button id="btnOpenSetupWizard" class="secondary-btn">Verificar requisitos...</button>
             <p class="hint">Atalhos globais são carregados na inicialização — reinicie o app após mudar de máquina/config de teclado.</p>

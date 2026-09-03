@@ -31,6 +31,13 @@ ajuda do Claude, transcrição/tradução ao vivo (PT/EN) e modo roteiro.
   por reunião e pode ser exportado em Markdown.
 - **Modo roteiro (teleprompter)**: escreva os tópicos da apresentação antes
   e deixe rolando na tela para não se perder.
+- **Layout customizável**: posição (arrastar livremente ou escolher um dos
+  4 cantos) e transparência do vidro ficam salvas; cada painel (Assistente,
+  Transcrição, Tradução, Roteiro, Notas) pode ser ligado/desligado.
+- **Idioma de transcrição por locutor**: dá pra fixar "Você" (microfone) e
+  "Outros" (áudio do sistema) em idiomas diferentes — inclusive travar os
+  dois em inglês, ou um em português e o outro em inglês, em vez de sempre
+  usar detecção automática.
 
 ## Stack
 

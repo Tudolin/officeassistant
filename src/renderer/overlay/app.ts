@@ -1,5 +1,5 @@
 import type { MeetingCopilotApi } from '../../preload/preload';
-import type { AssistantMessage, TranscriptLine, AppSettings } from '../../shared/types';
+import type { AppSettings, AssistantMessage, OverlayPositionPreset, PanelVisibility, TranscriptLine, WhisperLang } from '../../shared/types';
 
 declare global {
   interface Window {
@@ -16,6 +16,8 @@ function $<T extends HTMLElement>(id: string): T {
 }
 
 // ---------- Tabs ----------
+let applyPanelVisibility: (panels: PanelVisibility) => void = () => undefined;
+
 function initTabs(): void {
   const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab'));
   const panels = Array.from(document.querySelectorAll<HTMLElement>('.panel'));
@@ -30,6 +32,21 @@ function initTabs(): void {
   }
 
   api.overlay.onShowPanel((panelId) => activate(panelId));
+
+  applyPanelVisibility = (panelVisibility) => {
+    for (const tab of tabs) {
+      const id = tab.dataset.panel as keyof PanelVisibility | 'settings';
+      if (id === 'settings') continue; // always reachable, so the user can turn panels back on
+      tab.hidden = !panelVisibility[id];
+    }
+    const activeTab = tabs.find((t) => t.classList.contains('active'));
+    if (activeTab?.hidden) {
+      const fallback = tabs.find((t) => !t.hidden) ?? tabs.find((t) => t.dataset.panel === 'settings');
+      if (fallback) activate(fallback.dataset.panel as string);
+    }
+  };
+
+  api.settings.get().then((settings) => applyPanelVisibility(settings.panels));
 }
 
 // ---------- Titlebar ----------
@@ -233,6 +250,11 @@ function initNotes(): void {
 }
 
 // ---------- Settings ----------
+function applyGlassOpacity(opacity: number): void {
+  document.documentElement.style.setProperty('--glass-bg', `rgba(22, 24, 32, ${opacity})`);
+  document.documentElement.style.setProperty('--glass-bg-strong', `rgba(22, 24, 32, ${Math.min(1, opacity + 0.2)})`);
+}
+
 function initSettings(): void {
   const fields: Record<keyof Pick<AppSettings, 'claudeCliPath' | 'claudeModel' | 'whisperBinaryPath' | 'whisperModelPath' | 'dataDir'>, HTMLInputElement> = {
     claudeCliPath: $('cfgClaudeCli'),
@@ -241,8 +263,18 @@ function initSettings(): void {
     whisperModelPath: $('cfgWhisperModel'),
     dataDir: $('cfgDataDir'),
   };
-  const lang = $<HTMLSelectElement>('cfgWhisperLang');
+  const langYou = $<HTMLSelectElement>('cfgWhisperLangYou');
+  const langOthers = $<HTMLSelectElement>('cfgWhisperLangOthers');
   const keepAudio = $<HTMLInputElement>('cfgKeepAudio');
+  const position = $<HTMLSelectElement>('cfgOverlayPosition');
+  const opacity = $<HTMLInputElement>('cfgGlassOpacity');
+  const panelToggles: Record<keyof PanelVisibility, HTMLInputElement> = {
+    assistant: $('cfgPanelAssistant'),
+    transcript: $('cfgPanelTranscript'),
+    translation: $('cfgPanelTranslation'),
+    teleprompter: $('cfgPanelTeleprompter'),
+    notes: $('cfgPanelNotes'),
+  };
 
   api.settings.get().then((settings) => {
     fields.claudeCliPath.value = settings.claudeCliPath;
@@ -250,20 +282,45 @@ function initSettings(): void {
     fields.whisperBinaryPath.value = settings.whisperBinaryPath;
     fields.whisperModelPath.value = settings.whisperModelPath;
     fields.dataDir.value = settings.dataDir;
-    lang.value = settings.whisperLanguage;
+    langYou.value = settings.whisperLanguageYou;
+    langOthers.value = settings.whisperLanguageOthers;
     keepAudio.checked = settings.keepAudioChunks;
+    position.value = settings.overlayPositionPreset;
+    opacity.value = String(Math.round(settings.glassOpacity * 100));
+    applyGlassOpacity(settings.glassOpacity);
+    for (const key of Object.keys(panelToggles) as Array<keyof PanelVisibility>) {
+      panelToggles[key].checked = settings.panels[key];
+    }
+  });
+
+  // Live preview while dragging the slider; the actual save happens on "Salvar".
+  opacity.addEventListener('input', () => applyGlassOpacity(Number(opacity.value) / 100));
+
+  position.addEventListener('change', () => {
+    api.overlay.setPositionPreset(position.value as OverlayPositionPreset);
   });
 
   $('btnSaveSettings').addEventListener('click', async () => {
+    const panels: PanelVisibility = {
+      assistant: panelToggles.assistant.checked,
+      transcript: panelToggles.transcript.checked,
+      translation: panelToggles.translation.checked,
+      teleprompter: panelToggles.teleprompter.checked,
+      notes: panelToggles.notes.checked,
+    };
     await api.settings.set({
       claudeCliPath: fields.claudeCliPath.value.trim() || 'claude',
       claudeModel: fields.claudeModel.value.trim(),
       whisperBinaryPath: fields.whisperBinaryPath.value.trim(),
       whisperModelPath: fields.whisperModelPath.value.trim(),
       dataDir: fields.dataDir.value.trim(),
-      whisperLanguage: lang.value as AppSettings['whisperLanguage'],
+      whisperLanguageYou: langYou.value as WhisperLang,
+      whisperLanguageOthers: langOthers.value as WhisperLang,
       keepAudioChunks: keepAudio.checked,
+      glassOpacity: Number(opacity.value) / 100,
+      panels,
     });
+    applyPanelVisibility(panels);
     alert('Configurações salvas.');
   });
 
