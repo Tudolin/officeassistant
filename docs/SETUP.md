@@ -84,14 +84,21 @@ Gera o instalador NSIS em `release/`.
 
 ## Atalhos globais (padrão, configurável em Config futuramente via arquivo)
 
+Atalhos globais são exclusivos: enquanto o Meeting Copilot roda, a combinação
+não chega mais ao navegador (ou qualquer outro app) - por isso os padrões
+abaixo evitam de propósito combinações já usadas por Chrome/Edge/Firefox
+(ex: `Ctrl+Shift+T` reabre aba fechada, `Ctrl+Shift+R` dá refresh forçado -
+se o app tivesse escolhido essas, apertar por hábito no navegador acionaria
+o Meeting Copilot em vez do navegador, sem aviso nenhum).
+
 | Atalho | Ação |
 |---|---|
 | `Ctrl+Shift+H` | Mostrar/ocultar overlay |
 | `Ctrl+Shift+G` | Alternar "clique-através" (deixa a janela clicável ou não) |
 | `Ctrl+Shift+Space` | Focar campo de pergunta ao Claude |
 | `Ctrl+Shift+A` | Print da tela + enviar para o Claude (ajuda em pergunta/livecoding) |
-| `Ctrl+Shift+T` | Ligar/desligar transcrição da reunião |
-| `Ctrl+Shift+R` | Abrir o modo roteiro (teleprompter) |
+| `Ctrl+Shift+M` | Ligar/desligar transcrição da reunião |
+| `Ctrl+Shift+U` | Abrir o modo roteiro (teleprompter) |
 | `Ctrl+Shift+L` | Ligar/desligar tradução automática |
 
 ## Bandeja do sistema
