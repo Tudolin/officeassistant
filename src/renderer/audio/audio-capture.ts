@@ -81,24 +81,14 @@ async function startCapture(): Promise<void> {
   if (pipelines.length > 0) return;
 
   try {
-    const sourceId = await window.audioCapture.getDesktopSourceId();
-    const systemStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: sourceId,
-        },
-      } as unknown as MediaTrackConstraints,
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: sourceId,
-          maxWidth: 1,
-          maxHeight: 1,
-          maxFrameRate: 1,
-        },
-      } as unknown as MediaTrackConstraints,
-    });
+    // The modern, actively-maintained Electron API for system-audio loopback:
+    // the main process answers this via session.setDisplayMediaRequestHandler
+    // (see main/windows/audioCaptureWindow.ts), handing back the primary
+    // screen plus Electron's 'loopback' audio sentinel. The older
+    // chromeMediaSource "mandatory" getUserMedia constraints never delivered
+    // a single audio sample for this source in testing, even with the paired
+    // video track kept alive.
+    const systemStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
     if (systemStream.getAudioTracks().length === 0) {
       throw new Error('getUserMedia retornou sem faixa de áudio (sem suporte a loopback nesta máquina/driver?).');
     }

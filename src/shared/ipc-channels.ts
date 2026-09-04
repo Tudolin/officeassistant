@@ -18,7 +18,6 @@ export const IPC = {
   assistantEvent: 'assistant:event', // main -> renderer stream of AssistantMessage
 
   // Audio capture window <-> main
-  audioGetDesktopSourceId: 'audio:get-desktop-source-id',
   audioChunk: 'audio:chunk', // renderer(hidden) -> main raw PCM chunk
   audioCaptureStart: 'audio:capture-start', // main -> hidden renderer
   audioCaptureStop: 'audio:capture-stop', // main -> hidden renderer

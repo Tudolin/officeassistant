@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import { IPC } from '../shared/ipc-channels';
 
 const api = {
-  getDesktopSourceId: () => ipcRenderer.invoke(IPC.audioGetDesktopSourceId) as Promise<string>,
   sendChunk: (speaker: 'you' | 'others', pcm: ArrayBufferLike) => {
     // structured-clone friendly: ipcRenderer will copy the ArrayBuffer to main.
     ipcRenderer.send(IPC.audioChunk, { speaker, pcm });

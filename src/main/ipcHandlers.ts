@@ -1,4 +1,4 @@
-import { desktopCapturer, ipcMain, IpcMainInvokeEvent, screen } from 'electron';
+import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { IPC } from '../shared/ipc-channels';
 import { getSettings, setSettings } from './config';
 import { askClaude, askClaudeAboutImage } from './services/claudeCli';
@@ -102,14 +102,6 @@ export function registerIpcHandlers(): void {
     return enabled;
   });
   ipcMain.handle(IPC.transcriptionGetState, () => isTranscriptionEnabled());
-
-  ipcMain.handle(IPC.audioGetDesktopSourceId, async () => {
-    const display = screen.getPrimaryDisplay();
-    const sources = await desktopCapturer.getSources({ types: ['screen'] });
-    const primary = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
-    if (!primary) throw new Error('No screen source available for audio loopback capture.');
-    return primary.id;
-  });
 
   ipcMain.on(IPC.audioChunk, (_e, payload: { speaker: 'you' | 'others'; pcm: ArrayBufferLike }) => {
     ingestPcmChunk(payload.speaker, Buffer.from(payload.pcm));

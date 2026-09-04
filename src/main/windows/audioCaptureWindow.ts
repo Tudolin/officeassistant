@@ -1,9 +1,33 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, desktopCapturer, session } from 'electron';
 import path from 'path';
 
 let audioWindow: BrowserWindow | null = null;
 
+/**
+ * Wires up the modern, actively-supported Electron API for system-audio
+ * loopback capture: the renderer calls getDisplayMedia({audio: true}), and
+ * this handler answers it with the primary screen source plus Electron's
+ * 'loopback' audio sentinel (captures whatever the system is currently
+ * outputting). This replaces the legacy chromeMediaSource "mandatory"
+ * getUserMedia constraints, which - even with the paired video track kept
+ * alive - still failed to ever deliver an 'others' audio frame in testing.
+ */
+function registerDisplayMediaHandler(): void {
+  session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+      const primary = sources[0];
+      if (!primary) {
+        callback({});
+        return;
+      }
+      callback({ video: primary, audio: 'loopback' });
+    });
+  });
+}
+
 export function createAudioCaptureWindow(): BrowserWindow {
+  registerDisplayMediaHandler();
+
   audioWindow = new BrowserWindow({
     show: false,
     skipTaskbar: true,
