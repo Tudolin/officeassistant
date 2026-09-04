@@ -295,21 +295,34 @@ function initSettings(): void {
     notes: $('cfgPanelNotes'),
   };
 
-  api.settings.get().then((settings) => {
-    fields.claudeCliPath.value = settings.claudeCliPath;
-    fields.claudeModel.value = settings.claudeModel;
-    fields.whisperBinaryPath.value = settings.whisperBinaryPath;
-    fields.whisperModelPath.value = settings.whisperModelPath;
-    fields.dataDir.value = settings.dataDir;
-    langYou.value = settings.whisperLanguageYou;
-    langOthers.value = settings.whisperLanguageOthers;
-    keepAudio.checked = settings.keepAudioChunks;
-    position.value = settings.overlayPositionPreset;
-    opacity.value = String(Math.round(settings.glassOpacity * 100));
-    applyGlassOpacity(settings.glassOpacity);
-    for (const key of Object.keys(panelToggles) as Array<keyof PanelVisibility>) {
-      panelToggles[key].checked = settings.panels[key];
-    }
+  function loadSettingsIntoForm(): void {
+    api.settings.get().then((settings) => {
+      fields.claudeCliPath.value = settings.claudeCliPath;
+      fields.claudeModel.value = settings.claudeModel;
+      fields.whisperBinaryPath.value = settings.whisperBinaryPath;
+      fields.whisperModelPath.value = settings.whisperModelPath;
+      fields.dataDir.value = settings.dataDir;
+      langYou.value = settings.whisperLanguageYou;
+      langOthers.value = settings.whisperLanguageOthers;
+      keepAudio.checked = settings.keepAudioChunks;
+      position.value = settings.overlayPositionPreset;
+      opacity.value = String(Math.round(settings.glassOpacity * 100));
+      applyGlassOpacity(settings.glassOpacity);
+      for (const key of Object.keys(panelToggles) as Array<keyof PanelVisibility>) {
+        panelToggles[key].checked = settings.panels[key];
+      }
+    });
+  }
+
+  loadSettingsIntoForm();
+
+  // The setup wizard (a separate window) can change these paths - e.g. after
+  // downloading whisper.cpp - while the overlay stays open in the background.
+  // Without this, the form would still hold the stale values it loaded at
+  // startup and "Salvar" would silently overwrite the wizard's changes.
+  document.querySelector<HTMLButtonElement>('.tab[data-panel="settings"]')?.addEventListener('click', loadSettingsIntoForm);
+  api.overlay.onShowPanel((panelId) => {
+    if (panelId === 'settings') loadSettingsIntoForm();
   });
 
   // Live preview while dragging the slider; the actual save happens on "Salvar".
