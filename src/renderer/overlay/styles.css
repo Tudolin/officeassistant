@@ -172,6 +172,11 @@ body {
 .msg.screenshot {
   border-left: 3px solid #ffd27c;
 }
+.msg.info {
+  border-left: 3px solid var(--text-dim);
+  color: var(--text-dim);
+  font-size: 12px;
+}
 
 .transcript-line {
   background: var(--glass-highlight);

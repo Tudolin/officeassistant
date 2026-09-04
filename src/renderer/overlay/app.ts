@@ -166,7 +166,7 @@ function initTranscription(): void {
 
   api.diagnostics.onEvent((event) => {
     const div = document.createElement('div');
-    div.className = `msg error`;
+    div.className = `msg ${event.level}`;
     div.textContent = `[${new Date(event.timestamp).toLocaleTimeString('pt-BR')}] ${event.message}`;
     transcriptLog.appendChild(div);
     transcriptLog.scrollTop = transcriptLog.scrollHeight;

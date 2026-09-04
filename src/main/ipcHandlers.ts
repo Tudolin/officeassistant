@@ -115,9 +115,13 @@ export function registerIpcHandlers(): void {
     ingestPcmChunk(payload.speaker, Buffer.from(payload.pcm));
   });
 
-  ipcMain.on(IPC.audioCaptureError, (_e, payload: { source: 'you' | 'others'; message: string }) => {
+  ipcMain.on(IPC.audioCaptureError, (_e, payload: { level: 'info' | 'error'; source: 'you' | 'others'; message: string }) => {
     const who = payload.source === 'you' ? 'Você (microfone)' : 'Outros (áudio do sistema)';
-    sendToOverlay(IPC.diagnosticEvent, { level: 'error', message: `Captura de áudio - ${who}: ${payload.message}`, timestamp: Date.now() });
+    sendToOverlay(IPC.diagnosticEvent, {
+      level: payload.level,
+      message: `${who}: ${payload.message}`,
+      timestamp: Date.now(),
+    });
   });
 
   onTranscriptLine((line: TranscriptLine) => {

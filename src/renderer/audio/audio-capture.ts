@@ -21,6 +21,12 @@ interface Pipeline {
 }
 
 let pipelines: Pipeline[] = [];
+// Chromium's desktop loopback ties the audio track's lifecycle to the paired
+// video track in this legacy chromeMediaSource capture path: stopping (or
+// never rendering) the video track can silently starve the audio track with
+// no error and no data, even though the stream/track objects look "live".
+// Keeping it playing in a hidden <video> sink avoids that.
+let systemVideoSink: HTMLVideoElement | null = null;
 
 function float32ToInt16(input: Float32Array): Int16Array {
   const out = new Int16Array(input.length);
@@ -93,25 +99,31 @@ async function startCapture(): Promise<void> {
         },
       } as unknown as MediaTrackConstraints,
     });
-    // We only need the audio loopback track; drop the throwaway 1x1 video track.
-    systemStream.getVideoTracks().forEach((t) => t.stop());
     if (systemStream.getAudioTracks().length === 0) {
       throw new Error('getUserMedia retornou sem faixa de áudio (sem suporte a loopback nesta máquina/driver?).');
     }
+    // Do NOT stop the throwaway 1x1 video track - keep it attached to a
+    // hidden, playing <video> so the audio loopback track keeps flowing.
+    systemVideoSink = document.createElement('video');
+    systemVideoSink.muted = true;
+    systemVideoSink.srcObject = systemStream;
+    void systemVideoSink.play().catch(() => undefined);
     pipelines.push(attachPipeline('others', systemStream));
+    window.audioCapture.reportDiagnostic('info', 'others', 'Captura de áudio do sistema (loopback) iniciada.');
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[audio-capture] failed to capture system audio loopback:', err);
-    window.audioCapture.reportError('others', message);
+    window.audioCapture.reportDiagnostic('error', 'others', message);
   }
 
   try {
     const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     pipelines.push(attachPipeline('you', micStream));
+    window.audioCapture.reportDiagnostic('info', 'you', 'Captura de microfone iniciada.');
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[audio-capture] failed to capture microphone:', err);
-    window.audioCapture.reportError('you', message);
+    window.audioCapture.reportDiagnostic('error', 'you', message);
   }
 }
 
@@ -124,6 +136,12 @@ function stopCapture(): void {
     pipeline.context.close();
   }
   pipelines = [];
+
+  if (systemVideoSink) {
+    systemVideoSink.pause();
+    systemVideoSink.srcObject = null;
+    systemVideoSink = null;
+  }
 }
 
 window.audioCapture.onStart(() => {
