@@ -95,16 +95,23 @@ async function startCapture(): Promise<void> {
     });
     // We only need the audio loopback track; drop the throwaway 1x1 video track.
     systemStream.getVideoTracks().forEach((t) => t.stop());
+    if (systemStream.getAudioTracks().length === 0) {
+      throw new Error('getUserMedia retornou sem faixa de áudio (sem suporte a loopback nesta máquina/driver?).');
+    }
     pipelines.push(attachPipeline('others', systemStream));
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('[audio-capture] failed to capture system audio loopback:', err);
+    window.audioCapture.reportError('others', message);
   }
 
   try {
     const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     pipelines.push(attachPipeline('you', micStream));
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('[audio-capture] failed to capture microphone:', err);
+    window.audioCapture.reportError('you', message);
   }
 }
 

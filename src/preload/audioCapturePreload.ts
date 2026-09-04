@@ -17,6 +17,9 @@ const api = {
     ipcRenderer.on(IPC.audioCaptureStop, handler);
     return () => ipcRenderer.removeListener(IPC.audioCaptureStop, handler);
   },
+  reportError: (source: 'you' | 'others', message: string) => {
+    ipcRenderer.send(IPC.audioCaptureError, { source, message });
+  },
 };
 
 export type AudioCaptureApi = typeof api;

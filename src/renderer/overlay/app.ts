@@ -138,6 +138,7 @@ function initTranscription(): void {
   const toggle = $<HTMLInputElement>('toggleTranscription');
   const transcriptLog = $('transcriptLog');
   const translationLog = $('translationLog');
+  const heartbeat = $('transcriptHeartbeat');
 
   api.transcription.getState().then((enabled) => (toggle.checked = enabled));
 
@@ -151,6 +152,24 @@ function initTranscription(): void {
   api.transcription.onLine((line) => {
     const el = renderTranscriptLine(line, transcriptLog, false);
     transcriptElements.set(line.id, el);
+  });
+
+  // Proves the pipeline is alive even when a chunk had no speech to show -
+  // otherwise "enabled but nothing appears" looks identical to "broken".
+  api.transcription.onHeartbeat((info) => {
+    const who = info.speaker === 'you' ? 'Você' : 'Outros';
+    const time = new Date(info.timestamp).toLocaleTimeString('pt-BR');
+    heartbeat.textContent = info.hadSpeech
+      ? `Último bloco processado: ${who} às ${time}`
+      : `Último bloco processado: ${who} às ${time} (sem fala detectada)`;
+  });
+
+  api.diagnostics.onEvent((event) => {
+    const div = document.createElement('div');
+    div.className = `msg error`;
+    div.textContent = `[${new Date(event.timestamp).toLocaleTimeString('pt-BR')}] ${event.message}`;
+    transcriptLog.appendChild(div);
+    transcriptLog.scrollTop = transcriptLog.scrollHeight;
   });
 
   api.translation.onUpdate((line) => {

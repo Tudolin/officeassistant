@@ -25,6 +25,9 @@ export const IPC = {
   transcriptionEnable: 'audio:transcription-enable',
   transcriptionGetState: 'audio:transcription-get-state',
   transcriptEvent: 'audio:transcript-event', // main -> renderer
+  audioCaptureError: 'audio:capture-error', // hidden renderer -> main
+  audioHeartbeat: 'audio:heartbeat', // main -> renderer, proof-of-life per processed chunk
+  diagnosticEvent: 'diagnostic:event', // main -> renderer, surfaced errors
 
   // Translation
   translationEnable: 'translation:enable',

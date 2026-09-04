@@ -9,9 +9,13 @@ import type { SpeakerTag, TranscriptLine } from '../../shared/types';
 const SAMPLE_RATE = 16_000;
 
 type TranscriptListener = (line: TranscriptLine) => void;
+type HeartbeatListener = (info: { speaker: SpeakerTag; timestamp: number; hadSpeech: boolean }) => void;
+type DiagnosticListener = (message: string) => void;
 
 let enabled = false;
 let listener: TranscriptListener | null = null;
+let heartbeatListener: HeartbeatListener | null = null;
+let diagnosticListener: DiagnosticListener | null = null;
 
 // One serial queue per speaker so we never spawn overlapping whisper.cpp
 // processes for the same audio source (system audio vs. microphone).
@@ -32,6 +36,16 @@ export function onTranscriptLine(cb: TranscriptListener): void {
   listener = cb;
 }
 
+/** Fires after every processed chunk (speech or not) - proof the pipeline is alive. */
+export function onHeartbeat(cb: HeartbeatListener): void {
+  heartbeatListener = cb;
+}
+
+/** Fires when a chunk fails to process (e.g. whisper.cpp missing/crashing). */
+export function onDiagnostic(cb: DiagnosticListener): void {
+  diagnosticListener = cb;
+}
+
 /**
  * Called from the IPC handler whenever the hidden audio-capture window flushes
  * a ~6s buffer of raw 16-bit PCM mono samples for one source.
@@ -49,6 +63,7 @@ export function ingestPcmChunk(speaker: SpeakerTag, pcmBuffer: Buffer): void {
       const language = speaker === 'you' ? settings.whisperLanguageYou : settings.whisperLanguageOthers;
       const { text } = await transcribeWavFile(wavPath, language);
       const cleaned = cleanTranscript(text);
+      heartbeatListener?.({ speaker, timestamp: Date.now(), hadSpeech: !!cleaned });
       if (!cleaned) return;
 
       const line: TranscriptLine = {
@@ -60,7 +75,9 @@ export function ingestPcmChunk(speaker: SpeakerTag, pcmBuffer: Buffer): void {
       };
       listener?.(line);
     } catch (err) {
-      console.error('[audioPipeline] transcription failed:', (err as Error).message);
+      const message = `Transcrição falhou (${speaker === 'you' ? 'Você' : 'Outros'}): ${(err as Error).message}`;
+      console.error('[audioPipeline]', message);
+      diagnosticListener?.(message);
     }
   });
 }

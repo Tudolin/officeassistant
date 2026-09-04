@@ -13,7 +13,14 @@ import {
   updateNotes,
   updateTranscriptLine,
 } from './services/sessionStore';
-import { ingestPcmChunk, isTranscriptionEnabled, onTranscriptLine, setTranscriptionEnabled } from './services/audioPipeline';
+import {
+  ingestPcmChunk,
+  isTranscriptionEnabled,
+  onDiagnostic,
+  onHeartbeat,
+  onTranscriptLine,
+  setTranscriptionEnabled,
+} from './services/audioPipeline';
 import { onTranslation, queueTranslation } from './services/translation';
 import { getOverlayWindow, setOverlayPositionPreset, toggleClickThrough, toggleOverlayVisibility } from './windows/overlayWindow';
 import { getAudioCaptureWindow } from './windows/audioCaptureWindow';
@@ -108,11 +115,19 @@ export function registerIpcHandlers(): void {
     ingestPcmChunk(payload.speaker, Buffer.from(payload.pcm));
   });
 
+  ipcMain.on(IPC.audioCaptureError, (_e, payload: { source: 'you' | 'others'; message: string }) => {
+    const who = payload.source === 'you' ? 'Você (microfone)' : 'Outros (áudio do sistema)';
+    sendToOverlay(IPC.diagnosticEvent, { level: 'error', message: `Captura de áudio - ${who}: ${payload.message}`, timestamp: Date.now() });
+  });
+
   onTranscriptLine((line: TranscriptLine) => {
     addTranscriptLine(line);
     sendToOverlay(IPC.transcriptEvent, line);
     queueTranslation(line);
   });
+
+  onHeartbeat((info) => sendToOverlay(IPC.audioHeartbeat, info));
+  onDiagnostic((message) => sendToOverlay(IPC.diagnosticEvent, { level: 'error', message, timestamp: Date.now() }));
 
   onTranslation((line: TranscriptLine) => {
     updateTranscriptLine(line.id, { translation: line.translation });

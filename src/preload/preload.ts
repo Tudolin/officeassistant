@@ -3,6 +3,8 @@ import { IPC } from '../shared/ipc-channels';
 import type {
   AppSettings,
   AssistantMessage,
+  AudioHeartbeat,
+  DiagnosticEvent,
   MeetingSession,
   OverlayPositionPreset,
   TeleprompterScript,
@@ -38,6 +40,10 @@ const api = {
     setEnabled: (enabled: boolean) => ipcRenderer.invoke(IPC.transcriptionEnable, enabled) as Promise<boolean>,
     getState: () => ipcRenderer.invoke(IPC.transcriptionGetState) as Promise<boolean>,
     onLine: (cb: (line: TranscriptLine) => void) => on<TranscriptLine>(IPC.transcriptEvent, cb),
+    onHeartbeat: (cb: (info: AudioHeartbeat) => void) => on<AudioHeartbeat>(IPC.audioHeartbeat, cb),
+  },
+  diagnostics: {
+    onEvent: (cb: (event: DiagnosticEvent) => void) => on<DiagnosticEvent>(IPC.diagnosticEvent, cb),
   },
   translation: {
     setEnabled: (enabled: boolean) => ipcRenderer.invoke(IPC.translationEnable, enabled) as Promise<boolean>,

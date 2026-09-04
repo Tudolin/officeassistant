@@ -50,6 +50,18 @@ export interface AppSettings {
 
 export type SpeakerTag = 'you' | 'others';
 
+export interface AudioHeartbeat {
+  speaker: SpeakerTag;
+  timestamp: number;
+  hadSpeech: boolean;
+}
+
+export interface DiagnosticEvent {
+  level: 'error' | 'info';
+  message: string;
+  timestamp: number;
+}
+
 export interface TranscriptLine {
   id: string;
   timestamp: number;
