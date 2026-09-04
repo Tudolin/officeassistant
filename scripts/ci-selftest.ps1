@@ -9,6 +9,11 @@
 # actually honor the flag for every capture path they use (e.g. their
 # share-picker preview thumbnails) - that still requires a real machine, a
 # real screen share, and a second participant checking what they see.
+#
+# NOTE: this step currently runs with continue-on-error in the workflow
+# while we harden it against CI-environment quirks (e.g. no GPU) that can
+# differ from a real user's desktop - a failure here is a signal to
+# investigate, not automatically proof the real feature is broken.
 
 param(
   [Parameter(Mandatory = $true)][string]$ExePath
@@ -22,18 +27,59 @@ if (-not (Test-Path $ExePath)) {
 
 Add-Type @"
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
+
 public class MeetingCopilotSelfTest {
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
     [DllImport("user32.dll")]
     public static extern bool GetWindowDisplayAffinity(IntPtr hWnd, out uint pdwAffinity);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    public static string[] GetTopLevelWindowTitles() {
+        var titles = new List<string>();
+        EnumWindows((hWnd, lParam) => {
+            var sb = new StringBuilder(256);
+            GetWindowText(hWnd, sb, sb.Capacity);
+            var title = sb.ToString();
+            if (!string.IsNullOrWhiteSpace(title)) {
+                titles.Add(string.Format("\"{0}\" (visible={1})", title, IsWindowVisible(hWnd)));
+            }
+            return true;
+        }, IntPtr.Zero);
+        return titles.ToArray();
+    }
 }
 "@
 
 $WDA_EXCLUDEFROMCAPTURE = 0x11
-$proc = Start-Process -FilePath $ExePath -PassThru
+$stdoutLog = Join-Path $env:RUNNER_TEMP 'meeting-copilot-stdout.log'
+$stderrLog = Join-Path $env:RUNNER_TEMP 'meeting-copilot-stderr.log'
+$proc = Start-Process -FilePath $ExePath -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
+
+function Dump-Diagnostics {
+  Write-Host "--- Top-level window titles at time of failure ---"
+  foreach ($title in [MeetingCopilotSelfTest]::GetTopLevelWindowTitles()) {
+    Write-Host "  $title"
+  }
+  Write-Host "--- App stdout ---"
+  if (Test-Path $stdoutLog) { Get-Content $stdoutLog | Write-Host } else { Write-Host "  (no stdout captured)" }
+  Write-Host "--- App stderr ---"
+  if (Test-Path $stderrLog) { Get-Content $stderrLog | Write-Host } else { Write-Host "  (no stderr captured)" }
+}
 
 try {
   $hwnd = [IntPtr]::Zero
@@ -43,11 +89,13 @@ try {
     Start-Sleep -Milliseconds 500
     $hwnd = [MeetingCopilotSelfTest]::FindWindow($null, "Meeting Copilot")
     if ($proc.HasExited) {
+      Dump-Diagnostics
       throw "App process exited early (code $($proc.ExitCode)) before the overlay window appeared."
     }
   }
 
   if ($hwnd -eq [IntPtr]::Zero) {
+    Dump-Diagnostics
     throw "Could not find the 'Meeting Copilot' overlay window within 45s."
   }
 
