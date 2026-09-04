@@ -34,6 +34,13 @@ jobs:
       - name: Build Windows installer (NSIS)
         run: npm run dist
 
+      - name: Self-test - verify screen-capture exclusion (WDA_EXCLUDEFROMCAPTURE)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path release -Recurse -Filter "Meeting Copilot.exe" | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $exe) { throw "Could not locate the unpacked Meeting Copilot.exe under release/" }
+          ./scripts/ci-selftest.ps1 -ExePath $exe
+
       - name: Upload installer as workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -57,4 +64,8 @@ jobs:
             O instalador não é assinado digitalmente, então o Windows
             SmartScreen pode avisar "O Windows protegeu o computador" -
             clique em **Mais informações > Executar assim mesmo**.
+
+            Este build passou no teste automático que confirma, via API do
+            Windows, que a janela do overlay está de fato marcada como
+            excluída de captura de tela (WDA_EXCLUDEFROMCAPTURE).
           files: release/*.exe
