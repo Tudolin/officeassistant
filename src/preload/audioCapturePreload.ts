@@ -16,6 +16,11 @@ const api = {
     ipcRenderer.on(IPC.audioCaptureStop, handler);
     return () => ipcRenderer.removeListener(IPC.audioCaptureStop, handler);
   },
+  onFlushNow: (cb: () => void) => {
+    const handler = (_e: IpcRendererEvent) => cb();
+    ipcRenderer.on(IPC.audioFlushNow, handler);
+    return () => ipcRenderer.removeListener(IPC.audioFlushNow, handler);
+  },
   reportDiagnostic: (level: 'info' | 'error', source: 'you' | 'others', message: string) => {
     ipcRenderer.send(IPC.audioCaptureError, { level, source, message });
   },

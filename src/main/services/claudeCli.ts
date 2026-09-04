@@ -34,6 +34,10 @@ export function askClaude(prompt: string, options: ClaudeCallOptions = {}): Prom
   return new Promise((resolve, reject) => {
     const child = spawn(settings.claudeCliPath, args, {
       windowsHide: true,
+      // Without this, the CLI waits ~3s to see if anything will be piped in
+      // on stdin before proceeding - pure dead time for every single call
+      // here, since none of them ever pipe input.
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
     let stdout = '';
@@ -77,6 +81,35 @@ export function askClaudeAboutImage(imagePath: string, question: string): Promis
   ].join('\n');
 
   return askClaude(prompt, { allowedTools: ['Read'] });
+}
+
+/**
+ * Given the last ~45s of live transcript (mic + system audio, chronological),
+ * finds the question being asked to the user and answers it directly. Meant
+ * for spoken questions (e.g. an interviewer talking) that never touch the
+ * screen, so screenshotAsk can't help - Ctrl+Shift+Space triggers this
+ * instead of requiring the user to type the question out by hand.
+ */
+export function answerFromTranscript(transcriptText: string): Promise<string> {
+  const prompt = [
+    'You are helping someone answer questions live during a meeting or interview.',
+    'Below is a transcript of the last ~45 seconds of conversation. "Voce" is the user\'s own microphone; "Outros" is the other participant(s).',
+    '',
+    'Transcript:',
+    transcriptText,
+    '',
+    'This transcript comes from real-time speech-to-text, so expect run-on sentences, missing punctuation, and misheard words - the question may not be the very last line (it can be followed by more speech) and may be phrased awkwardly. Read past the noise and find the underlying question being asked to "Voce".',
+    'The questions are usually simple/factual - prioritize being fast and correct over exhaustive.',
+    'Reply in this exact compact format, in the same language as the question:',
+    'Pergunta: <the question you identified, one line>',
+    'Resposta: <a solid, correct, direct answer - 2-4 sentences max>',
+    'Por que: <one short sentence justifying the answer>',
+    '',
+    'If no clear question is present, reply with exactly: "Nenhuma pergunta clara detectada nos ultimos 45s."',
+    'Be concise - this is read live during a meeting. No preamble, no meta-commentary.',
+  ].join('\n');
+
+  return askClaude(prompt, { timeoutMs: 20_000 });
 }
 
 export function translateLine(text: string): Promise<string> {

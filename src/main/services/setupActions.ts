@@ -114,7 +114,12 @@ export async function downloadWhisperBinary(onProgress: ProgressCallback): Promi
   zip.extractAllTo(destDir, true);
   fs.rmSync(zipPath, { force: true });
 
-  const exePath = findFileRecursive(destDir, /^(whisper-cli|main)\.exe$/i);
+  // Prefer whisper-cli.exe: recent whisper.cpp releases keep a deprecated
+  // main.exe stub alongside it that only prints a "use whisper-cli.exe
+  // instead" notice and exits without transcribing anything - and since
+  // it comes first alphabetically, a plain single-pattern search would
+  // silently pick that dead stub over the real binary.
+  const exePath = findFileRecursive(destDir, /^whisper-cli\.exe$/i) ?? findFileRecursive(destDir, /^main\.exe$/i);
   if (!exePath) {
     throw new Error('O pacote baixado não contém whisper-cli.exe/main.exe. Configure o caminho manualmente.');
   }

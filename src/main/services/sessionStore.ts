@@ -48,6 +48,12 @@ export function updateTranscriptLine(id: string, patch: Partial<TranscriptLine>)
   persistToDisk(session);
 }
 
+/** Transcript lines whose timestamp falls within the last `windowMs`, oldest first. */
+export function getRecentTranscript(windowMs: number): TranscriptLine[] {
+  const cutoff = Date.now() - windowMs;
+  return getActiveSession().transcript.filter((line) => line.timestamp >= cutoff);
+}
+
 export function addAssistantMessage(message: AssistantMessage): void {
   getActiveSession().assistantLog.push(message);
   persistToDisk(getActiveSession());

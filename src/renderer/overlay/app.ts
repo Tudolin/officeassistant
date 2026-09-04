@@ -1,5 +1,13 @@
 import type { MeetingCopilotApi } from '../../preload/preload';
-import type { AppSettings, AssistantMessage, OverlayPositionPreset, PanelVisibility, TranscriptLine, WhisperLang } from '../../shared/types';
+import type {
+  AppSettings,
+  AssistantMessage,
+  OverlayPositionPreset,
+  PanelVisibility,
+  PoppablePanelId,
+  TranscriptLine,
+  WhisperLang,
+} from '../../shared/types';
 
 declare global {
   interface Window {
@@ -15,6 +23,29 @@ function $<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
+// ---------- Panel ownership ----------
+// If this window was opened with ?pop=<panelId>, it's a popped-out window
+// dedicated to exactly that one panel - no tab bar, always active. Otherwise
+// it's the main overlay, which owns every panel except whichever ones are
+// currently popped out elsewhere.
+const POPPABLE_PANELS: PoppablePanelId[] = ['assistant', 'transcript', 'translation', 'teleprompter', 'notes'];
+const popParam = new URLSearchParams(location.search).get('pop') as PoppablePanelId | null;
+const isPoppedWindow = popParam !== null;
+const poppedElsewhere = new Set<PoppablePanelId>();
+
+function owns(panelId: PoppablePanelId): boolean {
+  return isPoppedWindow ? panelId === popParam : !poppedElsewhere.has(panelId);
+}
+
+// Panel-content events arrive broadcast to every window (main + all popped
+// windows) - only the window that owns a given panel should touch its DOM,
+// otherwise a panel hidden in the main window (because it's popped out
+// elsewhere) would keep growing its log forever in the background.
+const hydrators: Partial<Record<PoppablePanelId, () => void>> = {};
+function hydrate(panelId: PoppablePanelId): void {
+  hydrators[panelId]?.();
+}
+
 // ---------- Tabs ----------
 let applyPanelVisibility: (panels: PanelVisibility) => void = () => undefined;
 
@@ -22,31 +53,70 @@ function initTabs(): void {
   const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab'));
   const panels = Array.from(document.querySelectorAll<HTMLElement>('.panel'));
 
+  function tabHideEl(tab: HTMLButtonElement): HTMLElement {
+    return (tab.closest('.tab-wrap') as HTMLElement | null) ?? tab;
+  }
+
   function activate(panelId: string) {
     for (const tab of tabs) tab.classList.toggle('active', tab.dataset.panel === panelId);
     for (const panel of panels) panel.classList.toggle('active', panel.dataset.panel === panelId);
   }
 
+  if (isPoppedWindow) {
+    // A popped-out window only ever shows the one panel it was opened for -
+    // no tab bar, nothing else to switch to.
+    $('tabs').hidden = true;
+    activate(popParam as string);
+    return;
+  }
+
   for (const tab of tabs) {
     tab.addEventListener('click', () => activate(tab.dataset.panel as string));
   }
+  for (const btn of Array.from(document.querySelectorAll<HTMLButtonElement>('.pop-btn'))) {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      api.overlay.popOut(btn.dataset.panel as PoppablePanelId);
+    });
+  }
 
-  api.overlay.onShowPanel((panelId) => activate(panelId));
+  let lastPanelVisibility: PanelVisibility | null = null;
 
-  applyPanelVisibility = (panelVisibility) => {
+  function recomputeTabVisibility(panelVisibility: PanelVisibility): void {
     for (const tab of tabs) {
       const id = tab.dataset.panel as keyof PanelVisibility | 'settings';
       if (id === 'settings') continue; // always reachable, so the user can turn panels back on
-      tab.hidden = !panelVisibility[id];
+      tabHideEl(tab).hidden = !panelVisibility[id] || poppedElsewhere.has(id);
     }
     const activeTab = tabs.find((t) => t.classList.contains('active'));
-    if (activeTab?.hidden) {
-      const fallback = tabs.find((t) => !t.hidden) ?? tabs.find((t) => t.dataset.panel === 'settings');
+    if (activeTab && tabHideEl(activeTab).hidden) {
+      const fallback = tabs.find((t) => !tabHideEl(t).hidden) ?? tabs.find((t) => t.dataset.panel === 'settings');
       if (fallback) activate(fallback.dataset.panel as string);
     }
+  }
+
+  applyPanelVisibility = (panelVisibility) => {
+    lastPanelVisibility = panelVisibility;
+    recomputeTabVisibility(panelVisibility);
   };
 
-  api.settings.get().then((settings) => applyPanelVisibility(settings.panels));
+  api.overlay.onShowPanel((panelId) => activate(panelId));
+
+  api.overlay.onPopStateChanged(({ panelId, popped }) => {
+    if (popped) poppedElsewhere.add(panelId);
+    else poppedElsewhere.delete(panelId);
+    if (lastPanelVisibility) recomputeTabVisibility(lastPanelVisibility);
+    // Docked back in: this window owns the panel again and needs to catch up
+    // on whatever happened while it was popped out elsewhere.
+    if (!popped) hydrate(panelId);
+  });
+
+  api.settings.get().then((settings) => {
+    for (const id of POPPABLE_PANELS) {
+      if (settings.poppedPanels[id]?.popped) poppedElsewhere.add(id);
+    }
+    applyPanelVisibility(settings.panels);
+  });
 }
 
 // ---------- Titlebar ----------
@@ -56,6 +126,13 @@ function initTitlebar(): void {
   api.overlay.onClickThroughChanged((enabled) => {
     $('statusDot').style.background = enabled ? '#ffd27c' : '';
   });
+
+  if (isPoppedWindow) {
+    $('btnHide').hidden = true;
+    const dockBtn = $('btnDock');
+    dockBtn.hidden = false;
+    dockBtn.addEventListener('click', () => api.overlay.dock(popParam as PoppablePanelId));
+  }
 }
 
 // ---------- Assistant ----------
@@ -71,6 +148,15 @@ function appendAssistantMessage(msg: AssistantMessage): void {
 
 function initAssistant(): void {
   const input = $<HTMLInputElement>('assistantInput');
+  const log = $('assistantLog');
+
+  hydrators.assistant = () => {
+    log.innerHTML = '';
+    api.session.getActive().then((session) => {
+      for (const msg of session.assistantLog) appendAssistantMessage(msg);
+    });
+  };
+  if (owns('assistant')) hydrate('assistant');
 
   async function ask() {
     const question = input.value.trim();
@@ -94,6 +180,17 @@ function initAssistant(): void {
     appendAssistantMessage(answer);
   }
 
+  async function answerRecentQuestion() {
+    appendAssistantMessage({
+      id: 'local',
+      timestamp: Date.now(),
+      kind: 'question',
+      text: '(analisando os últimos 45s de áudio...)',
+    });
+    const answer = await api.assistant.answerRecentQuestion();
+    appendAssistantMessage(answer);
+  }
+
   $('btnAsk').addEventListener('click', ask);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') ask();
@@ -101,11 +198,11 @@ function initAssistant(): void {
   $('btnScreenshot').addEventListener('click', screenshotAsk);
 
   api.overlay.onShortcutAskClaude(() => {
-    api.overlay.showPanel('assistant');
-    input.focus();
+    if (!isPoppedWindow) api.overlay.showPanel('assistant');
+    answerRecentQuestion();
   });
   api.overlay.onShortcutScreenshotAsk(() => {
-    api.overlay.showPanel('assistant');
+    if (!isPoppedWindow) api.overlay.showPanel('assistant');
     screenshotAsk();
   });
 }
@@ -140,16 +237,33 @@ function initTranscription(): void {
   const translationLog = $('translationLog');
   const heartbeat = $('transcriptHeartbeat');
 
+  const hydrateTranscription = () => {
+    transcriptElements.clear();
+    transcriptLog.innerHTML = '';
+    translationLog.innerHTML = '';
+    api.session.getActive().then((session) => {
+      for (const line of session.transcript) {
+        const el = renderTranscriptLine(line, transcriptLog, false);
+        transcriptElements.set(line.id, el);
+        if (line.translation) renderTranscriptLine(line, translationLog, true);
+      }
+    });
+  };
+  hydrators.transcript = hydrateTranscription;
+  hydrators.translation = hydrateTranscription;
+  if (owns('transcript') || owns('translation')) hydrateTranscription();
+
   api.transcription.getState().then((enabled) => (toggle.checked = enabled));
 
   toggle.addEventListener('change', () => api.transcription.setEnabled(toggle.checked));
   api.overlay.onShortcutToggleTranscription(() => {
     toggle.checked = !toggle.checked;
     api.transcription.setEnabled(toggle.checked);
-    api.overlay.showPanel('transcript');
+    if (!isPoppedWindow) api.overlay.showPanel('transcript');
   });
 
   api.transcription.onLine((line) => {
+    if (!owns('transcript')) return;
     const el = renderTranscriptLine(line, transcriptLog, false);
     transcriptElements.set(line.id, el);
   });
@@ -157,6 +271,7 @@ function initTranscription(): void {
   // Proves the pipeline is alive even when a chunk had no speech to show -
   // otherwise "enabled but nothing appears" looks identical to "broken".
   api.transcription.onHeartbeat((info) => {
+    if (!owns('transcript')) return;
     const who = info.speaker === 'you' ? 'Você' : 'Outros';
     const time = new Date(info.timestamp).toLocaleTimeString('pt-BR');
     heartbeat.textContent = info.hadSpeech
@@ -165,6 +280,7 @@ function initTranscription(): void {
   });
 
   api.diagnostics.onEvent((event) => {
+    if (!owns('transcript')) return;
     const div = document.createElement('div');
     div.className = `msg ${event.level}`;
     div.textContent = `[${new Date(event.timestamp).toLocaleTimeString('pt-BR')}] ${event.message}`;
@@ -174,13 +290,15 @@ function initTranscription(): void {
 
   api.translation.onUpdate((line) => {
     if (!line.translation) return;
-    renderTranscriptLine(line, translationLog, true);
-    const existing = transcriptElements.get(line.id);
-    if (existing && !existing.querySelector('.translation')) {
-      const tr = document.createElement('div');
-      tr.className = 'translation';
-      tr.textContent = line.translation;
-      existing.appendChild(tr);
+    if (owns('translation')) renderTranscriptLine(line, translationLog, true);
+    if (owns('transcript')) {
+      const existing = transcriptElements.get(line.id);
+      if (existing && !existing.querySelector('.translation')) {
+        const tr = document.createElement('div');
+        tr.className = 'translation';
+        tr.textContent = line.translation;
+        existing.appendChild(tr);
+      }
     }
   });
 
@@ -189,7 +307,7 @@ function initTranscription(): void {
   api.overlay.onShortcutToggleTranslation(() => {
     toggleTranslation.checked = !toggleTranslation.checked;
     api.translation.setEnabled(toggleTranslation.checked);
-    api.overlay.showPanel('translation');
+    if (!isPoppedWindow) api.overlay.showPanel('translation');
   });
 }
 
@@ -204,10 +322,13 @@ function initTeleprompter(): void {
   let scrolling = false;
   let rafId = 0;
 
-  api.teleprompter.get().then((script) => {
-    titleInput.value = script.title;
-    edit.value = script.content;
-  });
+  hydrators.teleprompter = () => {
+    api.teleprompter.get().then((script) => {
+      titleInput.value = script.title;
+      edit.value = script.content;
+    });
+  };
+  if (owns('teleprompter')) hydrate('teleprompter');
 
   function save() {
     api.teleprompter.set({ title: titleInput.value, content: edit.value });
@@ -242,9 +363,12 @@ function initTeleprompter(): void {
 function initNotes(): void {
   const notes = $<HTMLTextAreaElement>('notesEdit');
 
-  api.session.getActive().then((session) => {
-    notes.value = session.notes;
-  });
+  hydrators.notes = () => {
+    api.session.getActive().then((session) => {
+      notes.value = session.notes;
+    });
+  };
+  if (owns('notes')) hydrate('notes');
 
   let saveTimer = 0;
   notes.addEventListener('input', () => {
@@ -254,11 +378,10 @@ function initNotes(): void {
 
   $('btnNewMeeting').addEventListener('click', async () => {
     if (!confirm('Iniciar uma nova reunião? A anterior fica salva em disco.')) return;
-    const session = await api.session.newMeeting();
-    notes.value = session.notes;
-    $('assistantLog').innerHTML = '';
-    $('transcriptLog').innerHTML = '';
-    $('translationLog').innerHTML = '';
+    // Clearing every window's panels happens via api.session.onReset below,
+    // fired from main for every window (this one included) once the new
+    // session is created - so no local DOM clearing needed here.
+    await api.session.newMeeting();
   });
 
   $('btnExport').addEventListener('click', async () => {
@@ -366,3 +489,11 @@ initTranscription();
 initTeleprompter();
 initNotes();
 initSettings();
+
+// A new meeting clears every window's copy of the shared logs together -
+// each window only rebuilds the panels it currently owns.
+api.session.onReset(() => {
+  for (const id of POPPABLE_PANELS) {
+    if (owns(id)) hydrate(id);
+  }
+});

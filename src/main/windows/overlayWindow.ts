@@ -12,7 +12,8 @@ const DEFAULT_WIDTH = 420;
 const DEFAULT_HEIGHT = 560;
 const MARGIN = 24;
 
-function computePresetBounds(preset: OverlayPositionPreset, width: number, height: number): WindowBounds {
+/** Reused by panelWindow.ts so popped-out panels snap to the same screen corners. */
+export function computePresetBounds(preset: OverlayPositionPreset, width: number, height: number): WindowBounds {
   const { workArea } = screen.getPrimaryDisplay();
   const left = workArea.x + MARGIN;
   const right = workArea.x + workArea.width - width - MARGIN;
@@ -32,25 +33,21 @@ function computePresetBounds(preset: OverlayPositionPreset, width: number, heigh
   }
 }
 
-function isOnAnyDisplay(bounds: WindowBounds): boolean {
+/** Reused by panelWindow.ts to discard a saved position that's off-screen (e.g. an unplugged monitor). */
+export function isOnAnyDisplay(bounds: WindowBounds): boolean {
   return screen.getAllDisplays().some((d) => {
     const a = d.workArea;
     return bounds.x >= a.x - 50 && bounds.y >= a.y - 50 && bounds.x < a.x + a.width && bounds.y < a.y + a.height;
   });
 }
 
-function initialBounds(): WindowBounds {
-  const settings = getSettings();
-  if (settings.overlayBounds && isOnAnyDisplay(settings.overlayBounds)) {
-    return settings.overlayBounds;
-  }
-  return computePresetBounds(settings.overlayPositionPreset, DEFAULT_WIDTH, DEFAULT_HEIGHT);
-}
-
-export function createOverlayWindow(options: { startVisible: boolean } = { startVisible: true }): BrowserWindow {
-  const bounds = initialBounds();
-
-  overlayWindow = new BrowserWindow({
+/**
+ * Shared BrowserWindow options for every glass panel window (the main overlay
+ * and any popped-out panel): frameless/transparent, always-on-top above
+ * fullscreen shared apps, and excluded from screen capture.
+ */
+export function createGlassWindow(bounds: WindowBounds): BrowserWindow {
+  const win = new BrowserWindow({
     ...bounds,
     frame: false,
     transparent: true,
@@ -69,12 +66,27 @@ export function createOverlayWindow(options: { startVisible: boolean } = { start
   });
 
   // Highest tier so the overlay stays above fullscreen shared apps (Teams/Meet/Zoom).
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
   // The key trick: exclude this window from any screen capture/share (Windows: WDA_EXCLUDEFROMCAPTURE).
-  overlayWindow.setContentProtection(true);
+  win.setContentProtection(true);
 
+  return win;
+}
+
+function initialBounds(): WindowBounds {
+  const settings = getSettings();
+  if (settings.overlayBounds && isOnAnyDisplay(settings.overlayBounds)) {
+    return settings.overlayBounds;
+  }
+  return computePresetBounds(settings.overlayPositionPreset, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+}
+
+export function createOverlayWindow(options: { startVisible: boolean } = { startVisible: true }): BrowserWindow {
+  const bounds = initialBounds();
+
+  overlayWindow = createGlassWindow(bounds);
   overlayWindow.loadFile(path.join(__dirname, '..', 'renderer', 'overlay', 'index.html'));
 
   overlayWindow.once('ready-to-show', () => {

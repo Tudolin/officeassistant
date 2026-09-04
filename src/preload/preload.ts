@@ -7,6 +7,7 @@ import type {
   DiagnosticEvent,
   MeetingSession,
   OverlayPositionPreset,
+  PoppablePanelId,
   TeleprompterScript,
   TranscriptLine,
 } from '../shared/types';
@@ -29,11 +30,16 @@ const api = {
     onShortcutToggleTranscription: (cb: () => void) => on<void>(IPC.shortcutToggleTranscription, cb),
     onShortcutToggleTranslation: (cb: () => void) => on<void>(IPC.shortcutToggleTranslation, cb),
     setPositionPreset: (preset: OverlayPositionPreset) => ipcRenderer.send(IPC.overlaySetPositionPreset, preset),
+    popOut: (panelId: PoppablePanelId) => ipcRenderer.send(IPC.panelPopOut, panelId),
+    dock: (panelId: PoppablePanelId) => ipcRenderer.send(IPC.panelDock, panelId),
+    onPopStateChanged: (cb: (info: { panelId: PoppablePanelId; popped: boolean }) => void) =>
+      on<{ panelId: PoppablePanelId; popped: boolean }>(IPC.panelPopStateChanged, cb),
   },
   assistant: {
     ask: (question: string) => ipcRenderer.invoke(IPC.askClaude, question) as Promise<AssistantMessage>,
     screenshotAsk: (question: string) =>
       ipcRenderer.invoke(IPC.screenshotAsk, question) as Promise<AssistantMessage>,
+    answerRecentQuestion: () => ipcRenderer.invoke(IPC.answerRecentQuestion) as Promise<AssistantMessage>,
     onEvent: (cb: (msg: AssistantMessage) => void) => on<AssistantMessage>(IPC.assistantEvent, cb),
   },
   transcription: {
@@ -52,12 +58,15 @@ const api = {
   teleprompter: {
     get: () => ipcRenderer.invoke(IPC.teleprompterGet) as Promise<TeleprompterScript>,
     set: (script: TeleprompterScript) => ipcRenderer.invoke(IPC.teleprompterSet, script) as Promise<void>,
+    onUpdate: (cb: (script: TeleprompterScript) => void) => on<TeleprompterScript>(IPC.teleprompterEvent, cb),
   },
   session: {
     getActive: () => ipcRenderer.invoke(IPC.sessionGetActive) as Promise<MeetingSession>,
     updateNotes: (notes: string) => ipcRenderer.invoke(IPC.sessionUpdateNotes, notes) as Promise<void>,
     newMeeting: () => ipcRenderer.invoke(IPC.sessionNewMeeting) as Promise<MeetingSession>,
     exportMarkdown: () => ipcRenderer.invoke(IPC.sessionExport) as Promise<string>,
+    onNotesUpdate: (cb: (notes: string) => void) => on<string>(IPC.notesEvent, cb),
+    onReset: (cb: (session: MeetingSession) => void) => on<MeetingSession>(IPC.sessionResetEvent, cb),
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet) as Promise<AppSettings>,

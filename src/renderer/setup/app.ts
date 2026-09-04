@@ -130,9 +130,9 @@ function renderRequirement(req: RequirementStatus): HTMLElement {
     }
 
     if (req.id === 'whisper-model') {
-      const btn = actionButton('Baixar modelo "small" (~500 MB)', () => {
+      const btn = actionButton('Baixar modelo "base" (~150 MB)', () => {
         withBusyButton(btn, 'Baixando...', async () => {
-          const result = await api.downloadWhisperModel('small');
+          const result = await api.downloadWhisperModel('base');
           if (!result.ok) alert(`Falha ao baixar: ${result.error}`);
           await refresh();
         });

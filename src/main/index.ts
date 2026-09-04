@@ -1,5 +1,6 @@
 import { app } from 'electron';
 import { createOverlayWindow, getOverlayWindow, toggleClickThrough, toggleOverlayVisibility } from './windows/overlayWindow';
+import { getPanelWindow, isPanelPopped, restorePoppedPanels } from './windows/panelWindow';
 import { createAudioCaptureWindow } from './windows/audioCaptureWindow';
 import { createOrShowSetupWindow } from './windows/setupWindow';
 import { createTray } from './tray';
@@ -8,6 +9,25 @@ import { registerIpcHandlers } from './ipcHandlers';
 import { getSettings } from './config';
 import { setTranscriptionEnabled } from './services/audioPipeline';
 import { IPC } from '../shared/ipc-channels';
+import type { PoppablePanelId } from '../shared/types';
+
+/**
+ * Every hotkey/tray action that targets a panel needs to reach whichever
+ * window currently owns it - the main overlay, or its own popped-out window
+ * if the user dragged it out. Sending to the wrong one would silently do
+ * nothing visible (the event lands on a hidden tab in the main overlay).
+ */
+function showAndTarget(panelId: PoppablePanelId, channel: string, ...args: unknown[]): void {
+  if (isPanelPopped(panelId)) {
+    const win = getPanelWindow(panelId);
+    win?.show();
+    win?.focus();
+    win?.webContents.send(channel, ...args);
+  } else {
+    getOverlayWindow()?.show();
+    getOverlayWindow()?.webContents.send(channel, ...args);
+  }
+}
 
 // Single instance: a second launch (e.g. double-clicking the exe again) just
 // focuses/shows the existing overlay instead of opening a duplicate app.
@@ -25,6 +45,7 @@ if (!gotLock) {
     const settings = getSettings();
     createOverlayWindow({ startVisible: settings.setupCompleted });
     createAudioCaptureWindow();
+    restorePoppedPanels();
 
     const sharedActions = {
       toggleOverlay: () => toggleOverlayVisibility(),
@@ -32,26 +53,11 @@ if (!gotLock) {
         const enabled = toggleClickThrough();
         getOverlayWindow()?.webContents.send(IPC.clickThroughToggle, enabled);
       },
-      askClaude: () => {
-        getOverlayWindow()?.show();
-        getOverlayWindow()?.webContents.send(IPC.shortcutAskClaude);
-      },
-      screenshotAsk: () => {
-        getOverlayWindow()?.show();
-        getOverlayWindow()?.webContents.send(IPC.shortcutScreenshotAsk);
-      },
-      toggleTranscription: () => {
-        getOverlayWindow()?.show();
-        getOverlayWindow()?.webContents.send(IPC.shortcutToggleTranscription);
-      },
-      toggleTeleprompter: () => {
-        getOverlayWindow()?.show();
-        getOverlayWindow()?.webContents.send(IPC.panelShow, 'teleprompter');
-      },
-      toggleTranslation: () => {
-        getOverlayWindow()?.show();
-        getOverlayWindow()?.webContents.send(IPC.shortcutToggleTranslation);
-      },
+      askClaude: () => showAndTarget('assistant', IPC.shortcutAskClaude),
+      screenshotAsk: () => showAndTarget('assistant', IPC.shortcutScreenshotAsk),
+      toggleTranscription: () => showAndTarget('transcript', IPC.shortcutToggleTranscription),
+      toggleTeleprompter: () => showAndTarget('teleprompter', IPC.panelShow, 'teleprompter'),
+      toggleTranslation: () => showAndTarget('translation', IPC.shortcutToggleTranslation),
       openSettings: () => {
         getOverlayWindow()?.show();
         getOverlayWindow()?.webContents.send(IPC.panelShow, 'settings');

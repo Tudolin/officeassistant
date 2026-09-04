@@ -1,5 +1,8 @@
 export type PanelId = 'assistant' | 'transcript' | 'translation' | 'teleprompter' | 'notes' | 'settings';
 
+/** Every panel except 'settings' can be popped out into its own floating window. */
+export type PoppablePanelId = Exclude<PanelId, 'settings'>;
+
 export type WhisperLang = 'auto' | 'pt' | 'en';
 
 export type OverlayPositionPreset = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'custom';
@@ -17,6 +20,13 @@ export interface PanelVisibility {
   translation: boolean;
   teleprompter: boolean;
   notes: boolean;
+}
+
+/** Per-panel state for a panel that's been popped out of the main overlay into its own window. */
+export interface PanelWindowState {
+  popped: boolean;
+  bounds: WindowBounds | null;
+  positionPreset: OverlayPositionPreset;
 }
 
 export interface AppSettings {
@@ -37,6 +47,7 @@ export interface AppSettings {
   overlayPositionPreset: OverlayPositionPreset;
   glassOpacity: number;
   panels: PanelVisibility;
+  poppedPanels: Partial<Record<PoppablePanelId, PanelWindowState>>;
   hotkeys: {
     toggleOverlay: string;
     toggleClickThrough: string;

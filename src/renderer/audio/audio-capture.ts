@@ -140,3 +140,11 @@ window.audioCapture.onStart(() => {
 window.audioCapture.onStop(() => {
   stopCapture();
 });
+// Lets the "answer the recent question" shortcut force whatever's still
+// sitting in the buffer (up to CHUNK_SECONDS worth) out for transcription
+// right away, instead of waiting for the next scheduled flush - otherwise
+// the words spoken just before the shortcut was pressed might not be
+// transcribed yet when the recent-transcript window is read.
+window.audioCapture.onFlushNow(() => {
+  for (const pipeline of pipelines) flush(pipeline);
+});

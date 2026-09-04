@@ -6,6 +6,11 @@ export const IPC = {
   panelShow: 'overlay:panel-show',
   overlaySetPositionPreset: 'overlay:set-position-preset',
 
+  // Popping a panel out of the main overlay into its own floating window
+  panelPopOut: 'overlay:panel-pop-out', // renderer -> main
+  panelDock: 'overlay:panel-dock', // renderer -> main
+  panelPopStateChanged: 'overlay:panel-pop-state-changed', // main -> broadcast to all windows
+
   // Global-hotkey-triggered actions, forwarded from main to the overlay renderer
   shortcutAskClaude: 'shortcut:ask-claude',
   shortcutScreenshotAsk: 'shortcut:screenshot-ask',
@@ -15,12 +20,14 @@ export const IPC = {
   // Assistant (Claude Code CLI)
   askClaude: 'assistant:ask',
   screenshotAsk: 'assistant:screenshot-ask',
+  answerRecentQuestion: 'assistant:answer-recent-question',
   assistantEvent: 'assistant:event', // main -> renderer stream of AssistantMessage
 
   // Audio capture window <-> main
   audioChunk: 'audio:chunk', // renderer(hidden) -> main raw PCM chunk
   audioCaptureStart: 'audio:capture-start', // main -> hidden renderer
   audioCaptureStop: 'audio:capture-stop', // main -> hidden renderer
+  audioFlushNow: 'audio:flush-now', // main -> hidden renderer, flush partial buffers early
   transcriptionEnable: 'audio:transcription-enable',
   transcriptionGetState: 'audio:transcription-get-state',
   transcriptEvent: 'audio:transcript-event', // main -> renderer
@@ -35,12 +42,15 @@ export const IPC = {
   // Teleprompter
   teleprompterGet: 'teleprompter:get',
   teleprompterSet: 'teleprompter:set',
+  teleprompterEvent: 'teleprompter:event', // main -> broadcast, script changed elsewhere
 
   // Notes / session
   sessionGetActive: 'session:get-active',
   sessionUpdateNotes: 'session:update-notes',
   sessionNewMeeting: 'session:new-meeting',
   sessionExport: 'session:export',
+  notesEvent: 'session:notes-event', // main -> broadcast, notes changed elsewhere
+  sessionResetEvent: 'session:reset-event', // main -> broadcast, new meeting started
 
   // Settings
   settingsGet: 'settings:get',

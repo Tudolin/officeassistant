@@ -46,6 +46,11 @@ export function onDiagnostic(cb: DiagnosticListener): void {
   diagnosticListener = cb;
 }
 
+/** Resolves once whatever chunk is currently queued for each speaker has finished transcribing. */
+export function waitForQueues(): Promise<void> {
+  return Promise.all([queues.you, queues.others]).then(() => undefined);
+}
+
 /**
  * Called from the IPC handler whenever the hidden audio-capture window flushes
  * a ~6s buffer of raw 16-bit PCM mono samples for one source.

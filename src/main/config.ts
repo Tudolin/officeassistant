@@ -5,7 +5,10 @@ import type { AppSettings } from '../shared/types';
 
 const defaults: AppSettings = {
   claudeCliPath: 'claude',
-  claudeModel: '',
+  // Every assistant call here (Q&A, screenshot Q&A, live-question answering,
+  // translation) is a short, simple prompt read live during a meeting -
+  // Haiku is fast and accurate enough for that and keeps things responsive.
+  claudeModel: 'haiku',
   whisperBinaryPath: '',
   whisperModelPath: '',
   whisperLanguageYou: 'auto',
@@ -25,6 +28,7 @@ const defaults: AppSettings = {
     teleprompter: true,
     notes: true,
   },
+  poppedPanels: {},
   hotkeys: {
     toggleOverlay: 'Control+Shift+H',
     toggleClickThrough: 'Control+Shift+G',

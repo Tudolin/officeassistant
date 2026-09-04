@@ -33,17 +33,27 @@ export function transcribeWavFile(wavPath: string, language: WhisperLang): Promi
     '-nt', // no timestamps in output text
     '-otxt',
     '-of', outBase,
+    // whisper.cpp defaults to only 4 threads regardless of what the CPU
+    // has available. Mic ("you") and system audio ("others") transcribe
+    // concurrently on separate queues, so giving each call every logical
+    // core oversubscribes the CPU when both fire at once - measured 15-27s
+    // spikes vs. a steady ~4-8s when each gets half the cores instead.
+    '-t', String(Math.max(1, Math.floor(os.cpus().length / 2))),
   ];
 
   return new Promise((resolve, reject) => {
     const child = spawn(settings.whisperBinaryPath, args, { windowsHide: true });
 
+    let stdout = '';
     let stderr = '';
     const timer = setTimeout(() => {
       child.kill();
       reject(new Error('whisper.cpp timed out'));
     }, 30_000);
 
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString('utf8');
+    });
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString('utf8');
     });
@@ -52,11 +62,25 @@ export function transcribeWavFile(wavPath: string, language: WhisperLang): Promi
       reject(new Error(`Failed to launch whisper.cpp ("${settings.whisperBinaryPath}"): ${err.message}`));
     });
 
-    child.on('close', () => {
+    child.on('close', (code) => {
       clearTimeout(timer);
       const txtPath = `${outBase}.txt`;
+      const txtExists = fs.existsSync(txtPath);
       try {
-        const text = fs.existsSync(txtPath) ? fs.readFileSync(txtPath, 'utf8').trim() : '';
+        if (!txtExists) {
+          // whisper.cpp always writes the -otxt output file when it actually
+          // runs the transcription, even for silent/empty audio. No file
+          // means the binary didn't transcribe at all - e.g. it's the
+          // deprecated main.exe stub (whisper.cpp renamed it to
+          // whisper-cli.exe and left a shim that only prints a notice and
+          // exits 0), a crash, or a bad argument - and that must never be
+          // swallowed as an empty transcript.
+          const combined = `${stdout}${stderr}`.trim();
+          throw new Error(
+            `whisper.cpp produced no output file (exit code ${code}). stdout/stderr: ${combined.slice(-500) || '(empty)'}`
+          );
+        }
+        const text = fs.readFileSync(txtPath, 'utf8').trim();
         resolve({ text });
       } catch (err) {
         reject(err);
@@ -64,9 +88,6 @@ export function transcribeWavFile(wavPath: string, language: WhisperLang): Promi
         fs.rm(txtPath, { force: true }, () => undefined);
         if (!settings.keepAudioChunks) {
           fs.rm(wavPath, { force: true }, () => undefined);
-        }
-        if (stderr && !fs.existsSync(txtPath)) {
-          console.error('[whisper]', stderr.slice(-500));
         }
       }
     });

@@ -15,16 +15,32 @@
         </div>
         <div class="titlebar-actions">
           <button id="btnClickThrough" class="icon-btn" title="Alternar clique-atravessar (Ctrl+Shift+G)">⧉</button>
+          <button id="btnDock" class="icon-btn" title="Redockar na janela principal" hidden>⇲</button>
           <button id="btnHide" class="icon-btn" title="Ocultar overlay (Ctrl+Shift+H)">—</button>
         </div>
       </header>
 
       <nav id="tabs" class="tabs">
-        <button class="tab active" data-panel="assistant">Assistente</button>
-        <button class="tab" data-panel="transcript">Transcrição</button>
-        <button class="tab" data-panel="translation">Tradução</button>
-        <button class="tab" data-panel="teleprompter">Roteiro</button>
-        <button class="tab" data-panel="notes">Notas</button>
+        <div class="tab-wrap" data-panel="assistant">
+          <button class="tab active" data-panel="assistant">Assistente</button>
+          <button class="pop-btn" data-panel="assistant" title="Destacar em janela própria">⇱</button>
+        </div>
+        <div class="tab-wrap" data-panel="transcript">
+          <button class="tab" data-panel="transcript">Transcrição</button>
+          <button class="pop-btn" data-panel="transcript" title="Destacar em janela própria">⇱</button>
+        </div>
+        <div class="tab-wrap" data-panel="translation">
+          <button class="tab" data-panel="translation">Tradução</button>
+          <button class="pop-btn" data-panel="translation" title="Destacar em janela própria">⇱</button>
+        </div>
+        <div class="tab-wrap" data-panel="teleprompter">
+          <button class="tab" data-panel="teleprompter">Roteiro</button>
+          <button class="pop-btn" data-panel="teleprompter" title="Destacar em janela própria">⇱</button>
+        </div>
+        <div class="tab-wrap" data-panel="notes">
+          <button class="tab" data-panel="notes">Notas</button>
+          <button class="pop-btn" data-panel="notes" title="Destacar em janela própria">⇱</button>
+        </div>
         <button class="tab" data-panel="settings">⚙</button>
       </nav>
 

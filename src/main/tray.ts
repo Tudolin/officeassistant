@@ -29,7 +29,7 @@ export function createTray(actions: TrayActions): Tray {
   const menu = Menu.buildFromTemplate([
     { label: 'Mostrar/Ocultar overlay', click: () => actions.toggleOverlay() },
     { type: 'separator' },
-    { label: 'Perguntar ao Claude', click: () => actions.askClaude() },
+    { label: 'Responder pergunta (últimos 45s)', click: () => actions.askClaude() },
     { label: 'Print + perguntar', click: () => actions.screenshotAsk() },
     { label: 'Transcrever reunião', click: () => actions.toggleTranscription() },
     { label: 'Tradução automática', click: () => actions.toggleTranslation() },
