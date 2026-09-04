@@ -39,6 +39,16 @@ export function createAudioCaptureWindow(): BrowserWindow {
       // Needed so getUserMedia with desktop/loopback audio constraints works
       // without a permission prompt UI (there is no visible window to prompt on).
       autoplayPolicy: 'no-user-gesture-required',
+      // This window is never shown, so Chromium treats its page as
+      // permanently backgrounded and throttles it - including, critically,
+      // the media/Web Audio pipeline. That's almost certainly why the
+      // system-audio loopback track never delivered a single sample in
+      // testing (regardless of which capture API was used) while the
+      // microphone - driven by hardware audio-device callbacks, not by the
+      // renderer's throttled timers - kept working. Disabling background
+      // throttling keeps this window running at normal speed even though
+      // it's never visible.
+      backgroundThrottling: false,
     },
   });
 
